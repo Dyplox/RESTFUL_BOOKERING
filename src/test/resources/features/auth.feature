@@ -8,8 +8,9 @@ Característica: Realizar las pruebas automatizadas al modulo auth del servicios
   Escenario: Verificar si un usuario podra iniciar sesion con un username y una password validos
     Dado que Abel quiere logueaser en la Api
     Cuando el ingresa "admin" and "password"
+    Y el Guarda el token
     Entonces el verifica que el codigo HTTP sea 200
-    Entonces el deberia recibir el token y validar el esquema
+    Entonces el deberia recibir el token y validar el esquema "token.json"
     # Verify the time taken to log in with a valid username and password.
     Entonces el deberia ver un tiempo menor a 1500
 
@@ -22,10 +23,14 @@ Característica: Realizar las pruebas automatizadas al modulo auth del servicios
     Dado que Abel quiere logueaser en la Api
     Cuando el ingresa "<username>" and "<password>"
     Entonces el verifica que el codigo HTTP sea 200
-    Entonces el deberia recibir el token y validar el esquema
+    Entonces el deberia recibir el token y validar el esquema "token.json"
     Ejemplos:
       | username | password    |
       | admin    | BadPassword |
       | BadAdmin | password123 |
       |          | password123 |
       | admin    |             |
+
+      | admin    | password    |
+      | 1995     | password    |
+      | admin    | 12345667    |

@@ -8,9 +8,9 @@ import net.thucydides.core.annotations.Step;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
-public class ListBookings implements Task {
+public class BookingIds implements Task {
 
-    public ListBookings() {
+    public BookingIds() {
     }
 
     @Override
@@ -25,7 +25,7 @@ public class ListBookings implements Task {
         );
     }
 
-    public static ListBookings delServicio() {
-        return instrumented(ListBookings.class);
+    public static BookingIds delServicio() {
+        return instrumented(BookingIds.class);
     }
 }

@@ -6,6 +6,7 @@ import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Patch;
 import net.thucydides.core.annotations.Step;
 
+import static co.booker.utils.Constantes.TOKEN;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
@@ -20,16 +21,17 @@ public class PartialUpdateBooking implements Task {
     @Override
     @Step("create the token")
     public <T extends Actor> void performAs(T actor) {
+        String token = actor.recall(TOKEN);
         String body = "{\n" +
-                "    \"username\" : \"admin\",\n" +
-                "    \"password\" : \"password123\"\n" +
+                "    \"firstname\" : \"Jose\",\n" +
+                "    \"lastname\" : \"Gutierrez Rendon\"\n" +
                 "}";
 
         actor.attemptsTo(
                 Patch.to(BOOKING.toString() + id)
                         .with(requestSpecification -> requestSpecification
                                 .header("Content-Type", "application/json")
-                                .header("Cookie", "token=abc123")
+                                .header("Cookie", "token=" + token)
                                 .body(body)
                                 .relaxedHTTPSValidation()
                         )
@@ -37,7 +39,7 @@ public class PartialUpdateBooking implements Task {
         SerenityRest.lastResponse().getBody().prettyPrint();
     }
 
-    public static PartialUpdateBooking usuario() {
-        return instrumented(PartialUpdateBooking.class);
+    public static PartialUpdateBooking usuario(Integer id) {
+        return instrumented(PartialUpdateBooking.class, id);
     }
 }

@@ -1,6 +1,5 @@
 package co.booker.tasks.booking.gets;
 
-import co.booker.models.Booking;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Get;
@@ -11,18 +10,22 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
 
 public class BookingByCheck implements Task {
 
-    private Booking booking;
+    private String checkIn;
+    private String checkOut;
 
-    public BookingByCheck(Booking booking) {
-        this.booking = booking;
+    public BookingByCheck(String checkIn, String checkOut) {
+        this.checkIn = checkIn;
+        this.checkOut = checkOut;
     }
 
     @Override
     @Step("Obtener libro por Nombre")
     public <T extends Actor> void performAs(T actor) {
-        String dates = booking.getBookingDates().toString();
+        String queryParams = "?checkin=" + checkIn +
+                "&checkout=" + checkOut;
+
         actor.attemptsTo(
-                Get.resource(BOOKING + dates)
+                Get.resource(BOOKING + queryParams)
                         .with(requestSpecification -> requestSpecification
                                 .header("Content-Type", "application/json")
                                 .relaxedHTTPSValidation()
@@ -30,7 +33,7 @@ public class BookingByCheck implements Task {
         );
     }
 
-    public static BookingByCheck delServicio() {
-        return instrumented(BookingByCheck.class);
+    public static BookingByCheck delServicio(String checkIn, String checkOut) {
+        return instrumented(BookingByCheck.class, checkIn, checkOut);
     }
 }

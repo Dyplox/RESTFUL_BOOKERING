@@ -2,6 +2,7 @@ package co.booker.stepdefinitions;
 
 import co.booker.questions.CodigoRespuestaHttp;
 import co.booker.tasks.CrearToken;
+import co.booker.tasks.booking.GuardaToken;
 import io.cucumber.java.Before;
 import io.cucumber.java.es.Cuando;
 import io.cucumber.java.es.Dado;
@@ -44,18 +45,22 @@ public class AuthDefinition {
         theActorInTheSpotlight().attemptsTo(CrearToken.usuario(userName, password));
     }
 
+    @Cuando("el Guarda el token")
+    public void elGuardaElToken() {
+        theActorInTheSpotlight().attemptsTo(GuardaToken.ingreso());
+    }
+
     @Entonces("el verifica que el codigo HTTP sea {int}")
     public void elVerificaQueElCodigoHTTPSea(Integer statusHttps) {
         theActorInTheSpotlight().should(
                 seeThat("el codigo de respuesta", CodigoRespuestaHttp.fue(), equalTo(statusHttps))
-                        .orComplainWith(SerenityRest.lastResponse().getBody().jsonPath().get("reason"))
+                //.orComplainWith(SerenityRest.lastResponse().getBody().jsonPath().get("reason"))
         );
     }
 
-    @Entonces("el deberia recibir el token y validar el esquema")
-    public void elDeberiaRecibirElTokenYValidarElEsquema() {
+    @Entonces("el deberia recibir el token y validar el esquema {string}")
+    public void elDeberiaRecibirElTokenYValidarElEsquema(String jsonName) {
         String responseBody = SerenityRest.lastResponse().getBody().asString();
-        assertThat(responseBody, matchesJsonSchemaInClasspath("token.json"));
+        assertThat(responseBody, matchesJsonSchemaInClasspath(jsonName));
     }
-
 }

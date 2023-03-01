@@ -6,7 +6,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(CucumberWithSerenity.class)
 @CucumberOptions(
-        features = "src/test/resources/features/auth/auth.feature",
+        features = "src/test/resources/features/auth.feature",
         glue = "co/booker/stepdefinitions",
         snippets = CucumberOptions.SnippetType.CAMELCASE,
         plugin = {"pretty"}

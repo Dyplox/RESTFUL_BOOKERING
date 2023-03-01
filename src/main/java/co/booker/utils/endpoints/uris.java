@@ -3,7 +3,7 @@ package co.booker.utils.endpoints;
 public enum uris {
 
     AUTH("auth"),
-    BOOKING("booking"),
+    BOOKING("booking/"),
     PING("ping");
 
     private final String endpoint;

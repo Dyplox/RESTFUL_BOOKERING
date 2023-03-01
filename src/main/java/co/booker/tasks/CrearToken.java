@@ -22,8 +22,8 @@ public class CrearToken implements Task {
     @Step("create the token")
     public <T extends Actor> void performAs(T actor) {
         String body = "{\n" +
-                "    \"username\" : \"admin\",\n" +
-                "    \"password\" : \"password123\"\n" +
+                "    \"username\" : \"" + user + "\",\n" +
+                "    \"password\" : \"" + password + "\"\n" +
                 "}";
 
         actor.attemptsTo(
