@@ -1,6 +1,8 @@
 package co.booker.stepdefinitions;
 
 import co.booker.tasks.booking.CrearBooking;
+import co.booker.tasks.booking.deletes.DeleteBookingBasicAuth;
+import co.booker.tasks.booking.deletes.DeleteBookingByCookie;
 import co.booker.tasks.booking.gets.BookingByCheck;
 import co.booker.tasks.booking.gets.BookingByID;
 import co.booker.tasks.booking.gets.BookingByName;
@@ -50,6 +52,17 @@ public class BookingDefinition {
     @Cuando("el llama el servicio para actualizar parcialmente el bookin {int}")
     public void elLlamaElServicioParaActualizarParcialmenteElBookin(Integer id) {
         theActorInTheSpotlight().attemptsTo(PartialUpdateBooking.usuario(id));
+    }
+
+    //DELETE
+    @Cuando("el llama el servicio para eliminar mediante cookie el bookin {int}")
+    public void elLlamaElServicioParaEliminarMedianteCookieElBookin(Integer id) {
+        theActorInTheSpotlight().attemptsTo(DeleteBookingByCookie.delServicio(id.toString()));
+    }
+
+    @Cuando("el llama el servicio para eliminar mediante BasicAuth el bookin {int}")
+    public void elLlamaElServicioParaEliminarMedianteBasicAuthElBookin(Integer id) {
+        theActorInTheSpotlight().attemptsTo(DeleteBookingBasicAuth.delServicio(id.toString()));
     }
 
 }
