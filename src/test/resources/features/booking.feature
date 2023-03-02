@@ -4,7 +4,6 @@
 
 Característica: Realizar las pruebas automatizadas al modulo booking del servicios a RESTFUL - BOOKER
 
-
   # GETS
   Escenario: Verificar si la lista de Bookings es valida
     Dado que Abel quiere logueaser en la Api
@@ -29,12 +28,6 @@ Característica: Realizar las pruebas automatizadas al modulo booking del servic
     Cuando el llama el servicio para ver el bookin con id 11
     Entonces el verifica que el codigo HTTP sea 200
     Entonces el deberia recibir el token y validar el esquema "getBookingID.json"
-
- ##GETS
-   # % sign in search keyword should not redirect to 404 ERROR
-   # Pagination should be tested for searches returning high number of records
-   # Validate search rules defined for “Exact Match” with the search key word
-   # Validate search rules defined for “Similar Match” with the search key word
 
   # CREATE
   Escenario: Verificar si la creacion de Bookings es valida
@@ -78,7 +71,9 @@ Característica: Realizar las pruebas automatizadas al modulo booking del servic
     Entonces el verifica que el codigo HTTP sea 201
     Entonces el deberia recibir el token y validar el esquema "deleteBooking.json"
 
-
+  """
+  Algunas validaciones con mas tiempo
+  """
    # Validate Location Field
    # Enter valid “From” Date in the date picker field
    # Enter invalid “From” Date in the date picker field – Eg from date is greater than to date.

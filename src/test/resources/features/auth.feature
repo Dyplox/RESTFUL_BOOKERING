@@ -34,3 +34,4 @@ Característica: Realizar las pruebas automatizadas al modulo auth del servicios
       | admin    | password    |
       | 1995     | password    |
       | admin    | 12345667    |
+      | $&*@#    | $&*@#_()    |
