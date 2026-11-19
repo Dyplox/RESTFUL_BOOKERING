@@ -4,20 +4,39 @@ import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Put;
-import net.thucydides.core.annotations.Step;
+import net.serenitybdd.annotations.Step;
 
 import static co.booker.utils.Constantes.TOKEN;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
+/**
+ * Tarea que reemplaza por completo una reserva ({@code PUT /booking/{id}}).
+ *
+ * <p>Se autentica con la cabecera {@code Cookie: token=...}, usando el token guardado por
+ * {@link co.booker.tasks.booking.GuardaToken}. El body es fijo (Juan Gutierrez Arias,
+ * 2023-03-02 a 2023-03-09). Nota: la descripción de su {@code @Step} ("create the token") está
+ * copiada y no corresponde a esta tarea.</p>
+ */
 public class UpdateBooking implements Task {
 
     private Number id;
 
+    /**
+     * Constructor usado por Serenity al instrumentar la tarea; usar {@link #usuario(Integer)}.
+     *
+     * @param id identificador de la reserva a actualizar
+     */
     public UpdateBooking(Number id) {
         this.id = id;
     }
 
+    /**
+     * Envía la actualización en nombre del actor.
+     *
+     * @param actor actor que tiene guardado el token ({@code Constantes.TOKEN})
+     * @param <T>   tipo del actor
+     */
     @Override
     @Step("create the token")
     public <T extends Actor> void performAs(T actor) {
@@ -46,6 +65,12 @@ public class UpdateBooking implements Task {
         SerenityRest.lastResponse().getBody().prettyPrint();
     }
 
+    /**
+     * Crea la tarea instrumentada por Serenity.
+     *
+     * @param id identificador de la reserva a actualizar
+     * @return tarea lista para {@code actor.attemptsTo(...)}
+     */
     public static UpdateBooking usuario(Integer id) {
         return instrumented(UpdateBooking.class, id);
     }

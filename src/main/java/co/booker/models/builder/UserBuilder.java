@@ -4,6 +4,7 @@ import co.booker.models.Location;
 import co.booker.models.User;
 import co.booker.utils.Builder;
 
+/** Builder de {@link User} con valores por defecto. Heredado de la plantilla original; no se usa. */
 public class UserBuilder implements Builder<User> {
 
     private String id;
@@ -19,6 +20,11 @@ public class UserBuilder implements Builder<User> {
         this.location = LocationBuilder.byDefault();
     }
 
+    /**
+     * Crea un usuario con los valores por defecto del builder.
+     *
+     * @return usuario construido
+     */
     public static User byDefault() {
         System.out.println("llamdas build");
         return new UserBuilder().build();

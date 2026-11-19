@@ -3,6 +3,7 @@ package co.booker.models.builder;
 import co.booker.models.Location;
 import co.booker.utils.Builder;
 
+/** Builder de {@link Location} con valores por defecto. Heredado de la plantilla original; no se usa. */
 public class LocationBuilder implements Builder<Location> {
     private String street;
     private String city;
@@ -18,6 +19,11 @@ public class LocationBuilder implements Builder<Location> {
         this.timezone = "UTC-5";
     }
 
+    /**
+     * Crea una ubicación con los valores por defecto del builder.
+     *
+     * @return ubicación construida
+     */
     public static Location byDefault(){
         return new LocationBuilder().build();
     }

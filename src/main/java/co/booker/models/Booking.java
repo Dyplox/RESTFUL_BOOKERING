@@ -1,5 +1,10 @@
 package co.booker.models;
 
+/**
+ * Modelo de una reserva de Restful Booker.
+ *
+ * <p>Actualmente no se usa: las tareas construyen los bodies JSON como texto.</p>
+ */
 public class Booking {
     private String firstname;
     private String lastname;
@@ -9,6 +14,16 @@ public class Booking {
     private String additionalneeds;
 
 
+    /**
+     * Crea una reserva.
+     *
+     * @param firstname       nombre del huésped
+     * @param lastname        apellido del huésped
+     * @param totalprice      precio total
+     * @param depositpaid     si se pagó el depósito
+     * @param bookingDates    fechas de entrada y salida
+     * @param additionalneeds necesidades adicionales (p. ej. "Breakfast")
+     */
     public Booking(String firstname, String lastname, Number totalprice, Boolean depositpaid,
                    BookingDates bookingDates, String additionalneeds) {
         this.firstname = firstname;

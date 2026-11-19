@@ -22,26 +22,27 @@ Cubre tres módulos de la API:
 |---|---|---|
 | Java | 27 (toolchain Gradle) | Lenguaje |
 | Gradle | 9.9.1 (wrapper) | Build y ejecución |
-| Serenity BDD | 3.3.9-RC3 | Framework de pruebas + reportes HTML |
-| Serenity Screenplay REST | 3.3.9-RC3 | Interacciones HTTP (`Get`, `Post`, `Put`, `Patch`, `Delete`) |
-| RestAssured | 5.3.0 | Motor HTTP bajo Serenity (`SerenityRest`) |
+| Serenity BDD | 5.4.2 | Framework de pruebas + reportes HTML |
+| Serenity Screenplay REST | 5.4.2 | Interacciones HTTP (`Get`, `Post`, `Put`, `Patch`, `Delete`) |
+| RestAssured | 6.3.0 | Motor HTTP bajo Serenity (`SerenityRest`) |
 | json-schema-validator | 5.3.0 | Validación de cuerpo contra esquema |
-| Cucumber | 4.2.0 | Escenarios BDD en español (`# language: es`) |
-| Hamcrest | 2.2 | Matchers de aserción |
-| SonarQube plugin | 3.3 | Análisis estático (`gradle sonarqube`) |
+| Cucumber | 8.1.0 | Escenarios BDD en español (`# language: es`), motor JUnit Platform |
+| JUnit Platform | 6.1.3 | Runners como `@Suite` (`junit-platform-suite`) |
+| Hamcrest | 3.0 | Matchers de aserción |
+| SonarQube plugin | 7.6.0 | Análisis estático (`./gradlew sonar`) |
 
 > El `pom.xml` es un resto de una plantilla Maven; el build real es **Gradle**.
 
 ### Ajustes necesarios para Java 27
 
-Serenity 3.x usa ByteBuddy 1.12, anterior a Java 27. En `build.gradle` la tarea `test` añade:
+Serenity REST (`RestSpecificationFactory`) genera clases en tiempo de ejecución con ByteBuddy inyectándolas por reflexión en `ClassLoader.defineClass`. Desde Java 26 eso está bloqueado por defecto, así que la tarea `test` añade:
 
 ```groovy
-jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'   // ByteBuddy define clases por reflexión
-systemProperty 'net.bytebuddy.experimental', 'true'         // acepta bytecode de Java 27
+jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'   // permite la reflexión sobre ClassLoader
+systemProperty 'net.bytebuddy.safe', 'false'                 // reactiva la vía Unsafe de ByteBuddy
 ```
 
-Es un parche; la solución de fondo es actualizar Serenity a una versión reciente.
+Ojo: el mensaje de error de ByteBuddy pide poner `net.bytebuddy.safe` a `true`, pero en Java 26+ su valor por defecto ya es `true` y es `false` lo que funciona (verificado en el bytecode de ByteBuddy 1.18.15). Sin estos dos ajustes todas las pruebas fallan con `Could not initialize class RestSpecificationFactory`. Se podrán retirar cuando Serenity cambie a inyección por `MethodHandles.Lookup`.
 
 ## 3. Patrón Screenplay
 
@@ -83,7 +84,7 @@ src/main/java/co/booker/
 └── exception/                     ThreadStoppedException, ExceptionErrors
 
 src/test/java/co/booker/
-├── runners/                       AuthRunner, BookingRunner, PingRunner (un runner por feature)
+├── runners/                       AuthRunner, BookingRunner, PingRunner (un @Suite de JUnit Platform por feature)
 └── stepdefinitions/               AuthDefinition (incluye @Before y pasos comunes), BookingDefinition, PingDefinition
 
 src/test/resources/
@@ -122,7 +123,7 @@ Los pasos de validación (`verifica que el codigo HTTP`, `validar el esquema`, `
 
 ## 8. Problemas conocidos
 
-Estado al migrar a Java 27: **10 pruebas, 2 pasan, 8 fallan** — ninguna por la versión de Java.
+Estado tras actualizar a Serenity 5.4.2 / Cucumber 8.1.0: **19 pruebas (los `Ejemplos` cuentan por separado), 11 pasan, 8 fallan**, ninguna por las versiones de las herramientas. Ping puede fallar o pasar según la latencia.
 
 | # | Problema | Efecto | Ubicación |
 |---|---|---|---|
@@ -135,8 +136,7 @@ Estado al migrar a Java 27: **10 pruebas, 2 pasan, 8 fallan** — ninguna por la
 | 7 | Dos escenarios DELETE con el mismo título | Reportes confusos | `booking.feature` |
 | 8 | Bodies JSON construidos como `String` concatenado | Los modelos `Booking`/`BookingDates` existen pero no se usan | `tasks/` |
 | 9 | Descripciones `@Step` copiadas (p. ej. "Obtener libro por Nombre" en filtro por fechas) | Reportes Serenity engañosos | `tasks/` |
-| 10 | Mezcla de versiones de Cucumber (4.2.0 / core 2.0.0) y JUnit 4/5 | Riesgo de conflictos de classpath | `build.gradle` |
-| 11 | `gradlew` sin permiso de ejecución | Hay que lanzar `sh ./gradlew` | raíz |
+| 10 | Los `Ejemplos` de login inválido pasan siempre | Consecuencia del punto 1: `token.json` no valida nada | `auth.feature` |
 
 ## 9. Próximos pasos sugeridos
 
@@ -144,5 +144,5 @@ Estado al migrar a Java 27: **10 pruebas, 2 pasan, 8 fallan** — ninguna por la
 2. Reemplazar los `.json` por JSON Schema reales (`type`, `properties`, `required`).
 3. Crear el booking dentro del escenario y reutilizar su `bookingid` en GET/PUT/PATCH/DELETE.
 4. Añadir Questions que validen valores del cuerpo (`jsonPath`).
-5. Actualizar Serenity a una versión reciente y retirar los ajustes de `--add-opens`/ByteBuddy experimental.
+5. Retirar `--add-opens` y `net.bytebuddy.safe=false` cuando Serenity deje de inyectar clases por reflexión.
 6. Quitar `ignoreFailures = true` para que CI detecte fallos; eliminar `pom.xml` y configuración WebDriver sobrante.

@@ -1,5 +1,11 @@
 package co.booker.exception;
 
+/**
+ * Error de aserción con mensajes predefinidos.
+ *
+ * <p>Heredado de la plantilla original (DummyApi): sus mensajes no corresponden a Restful Booker
+ * y la clase no se usa actualmente.</p>
+ */
 public class ExceptionErrors extends AssertionError{
     public static final String APP_ID_NOT_EXIST = "app-id header is found but the value is not valid";
 
@@ -14,6 +20,12 @@ public class ExceptionErrors extends AssertionError{
 
     public static final String TIME_GREATER = "Tiempo es mayor a un segundo (1sg)";
 
+    /**
+     * Crea el error con su mensaje y causa.
+     *
+     * @param mensaje descripción del error
+     * @param causa   excepción original
+     */
     public ExceptionErrors(String mensaje, Throwable causa) {
         super(mensaje, causa);
     }

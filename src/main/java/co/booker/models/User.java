@@ -2,6 +2,11 @@ package co.booker.models;
 
 import co.booker.models.builder.UserBuilder;
 
+/**
+ * Modelo de usuario heredado de la plantilla original del proyecto (DummyApi).
+ *
+ * <p>No se usa en las pruebas de Restful Booker.</p>
+ */
 public class User {
     private String id;
     private String title;
@@ -18,6 +23,11 @@ public class User {
     public User() {
     }
 
+    /**
+     * Crea un usuario a partir de un builder.
+     *
+     * @param builder builder con nombre, apellido, email y ubicación
+     */
     public User(UserBuilder builder) {
         this.firstName = builder.getFirstName();
         this.lastName = builder.getLastName();
@@ -25,6 +35,11 @@ public class User {
         this.location = builder.getLocation();
     }
 
+    /**
+     * Crea un usuario solo con identificador.
+     *
+     * @param id identificador del usuario
+     */
     public User(String id) {
         this.id = id;
     }

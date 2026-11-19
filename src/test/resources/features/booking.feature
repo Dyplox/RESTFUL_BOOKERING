@@ -71,9 +71,7 @@ Característica: Realizar las pruebas automatizadas al modulo booking del servic
     Entonces el verifica que el codigo HTTP sea 201
     Entonces el deberia recibir el token y validar el esquema "deleteBooking.json"
 
-  """
-  Algunas validaciones con mas tiempo
-  """
+  # Algunas validaciones con mas tiempo
    # Validate Location Field
    # Enter valid “From” Date in the date picker field
    # Enter invalid “From” Date in the date picker field – Eg from date is greater than to date.

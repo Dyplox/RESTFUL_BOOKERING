@@ -18,17 +18,17 @@ Cada prueba valida el **código HTTP**, la **estructura del JSON** de respuesta 
 |---|---|---|
 | Java (JDK) | 27 | Lenguaje; configurado como *toolchain* de Gradle |
 | Gradle (wrapper) | 9.9.1 | Compilación, dependencias y ejecución de pruebas |
-| Serenity BDD (`serenity-core`) | 3.3.9-RC3 | Framework de pruebas y reportes HTML |
-| Serenity Screenplay REST | 3.3.9-RC3 | Patrón Screenplay e interacciones HTTP (`Get`, `Post`, `Put`, `Patch`, `Delete`) |
-| Serenity Cucumber | 3.3.9-RC3 | Integración de Cucumber con Serenity (`CucumberWithSerenity`) |
-| Serenity Gradle Plugin | 2.0.81 | Generación del reporte agregado (`aggregate`) |
-| Cucumber (`cucumber-java`, `cucumber-junit`) | 4.2.0 | Escenarios BDD en Gherkin, en español |
-| RestAssured | 5.3.0 | Motor HTTP bajo Serenity (`SerenityRest`) |
-| RestAssured JSON Schema Validator | 5.3.0 | Validación del body contra un esquema JSON |
-| Hamcrest | 2.2 | Matchers de aserción (`equalTo`, `lessThan`) |
-| JUnit | 4 (runner) / 5.5.2 (plataforma) | Ejecución de los runners de Cucumber |
-| Gson | 2.8.9 | Serialización JSON |
-| SonarQube Gradle Plugin | 3.3 | Análisis estático de código (`./gradlew sonarqube`) |
+| Serenity BDD (`serenity-core`) | 5.4.2 | Framework de pruebas y reportes HTML |
+| Serenity Screenplay REST | 5.4.2 | Patrón Screenplay e interacciones HTTP (`Get`, `Post`, `Put`, `Patch`, `Delete`) |
+| Serenity Cucumber | 5.4.2 | Integración de Cucumber con Serenity (`SerenityReporterParallel`) |
+| Serenity Gradle Plugin | 5.4.2 | Generación del reporte agregado (`aggregate`) |
+| Cucumber (`cucumber-java`, `cucumber-junit-platform-engine`) | 8.1.0 | Escenarios BDD en Gherkin, en español |
+| RestAssured | 6.3.0 | Motor HTTP bajo Serenity (`SerenityRest`) |
+| RestAssured JSON Schema Validator | 6.3.0 | Validación del body contra un esquema JSON |
+| Hamcrest | 3.0 | Matchers de aserción (`equalTo`, `lessThan`) |
+| JUnit Platform (`junit-platform-suite`) | 6.1.3 | Ejecución de los runners de Cucumber como `@Suite` |
+| Gson | 2.15.0 | Serialización JSON |
+| SonarQube Gradle Plugin | 7.6.0 | Análisis estático de código (`./gradlew sonarqube`) |
 
 ## Requisitos
 
@@ -42,7 +42,6 @@ Gradle no hace falta instalarlo: el proyecto incluye el wrapper (Gradle 9.9.1). 
 ```bash
 git clone https://github.com/Dyplox/RESTFUL_BOOKERING.git
 cd RESTFUL_BOOKERING
-chmod +x gradlew   # solo la primera vez, si gradlew no es ejecutable
 ```
 
 ## Ejecución
