@@ -1,5 +1,14 @@
 # RESTFUL_BOOKERING
 
+[![CI](https://github.com/Dyplox/RESTFUL_BOOKERING/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Dyplox/RESTFUL_BOOKERING/actions/workflows/ci.yml)
+[![Reporte Serenity](https://img.shields.io/badge/reporte-Serenity-2ea44f)](https://dyplox.github.io/RESTFUL_BOOKERING/)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Dyplox_RESTFUL_BOOKERING&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Dyplox_RESTFUL_BOOKERING)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Dyplox_RESTFUL_BOOKERING&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Dyplox_RESTFUL_BOOKERING)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Dyplox_RESTFUL_BOOKERING&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Dyplox_RESTFUL_BOOKERING)
+[![Release](https://img.shields.io/github/v/release/Dyplox/RESTFUL_BOOKERING)](https://github.com/Dyplox/RESTFUL_BOOKERING/releases)
+[![Java](https://img.shields.io/badge/Java-27-orange)](https://openjdk.org/projects/jdk/27/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Pruebas automatizadas de la API pública [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) con **Serenity BDD**, patrón **Screenplay**, **Cucumber** (escenarios en español) y **RestAssured**, más pruebas unitarias con **JUnit Jupiter** y un pipeline de **GitHub Actions**.
 
 Cubre:
@@ -72,6 +81,9 @@ cd RESTFUL_BOOKERING
 
 # Todo: unitarias + validación de features + API
 ./gradlew check
+
+# Cobertura combinada (unitarias + API): build/reports/jacoco/test/html/index.html
+./gradlew unitTest test jacocoTestReport -Penv=docker
 ```
 
 El reporte HTML se regenera en cada ejecución en `target/site/serenity/index.html`. Si una prueba falla, el build termina en `BUILD FAILED` y el reporte se genera igualmente.
@@ -104,6 +116,13 @@ Además:
 - **Vigilancia diaria:** ejecuta los `@defectoConocido` y **falla si alguno empieza a pasar**, lo que indicaría que la API lo corrigió y hay que reclasificar el escenario. También corre `@rendimiento`, a título informativo.
 - **Reporte en GitHub Pages:** en cada push a `main` se publica el reporte de Serenity. Requiere activarlo una vez en *Settings → Pages → Source: GitHub Actions*.
 - **Dependencias al día:** Dependabot abre PRs semanales para Gradle (`gradle/libs.versions.toml`), las GitHub Actions (fijadas por SHA) y la imagen Docker (fijada por *digest*).
+
+## Calidad y releases
+
+- **SonarQube Cloud**: el CI analiza el código en cada push y PR, con la cobertura combinada de JaCoCo, y espera al *quality gate*. Necesita el secreto `SONAR_TOKEN` en el repositorio; sin él, el paso se omite.
+- **Releases**: la versión está en `gradle.properties` y los cambios en [`CHANGELOG.md`](CHANGELOG.md). Para publicar:
+  1. En un PR, subir la versión y mover las notas de `[Sin publicar]` a `## [<versión>] - <fecha>`.
+  2. Tras el merge: `git tag v<versión> origin/main && git push origin v<versión>`. El workflow `release` verifica el tag y publica la release con el Javadoc.
 
 ## Configuración
 
@@ -162,6 +181,10 @@ Escenario: Eliminar una reserva sin token devuelve 403 y no la borra
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
 | Unitarias | 48 | ✅ |
 | Validación de features | 53 escenarios | ✅ todos los pasos implementados |
+
+## Licencia
+
+[MIT](LICENSE)
 
 ## Autor
 

@@ -30,7 +30,8 @@ Además hay **pruebas unitarias** (sin red) y un pipeline de **CI** en GitHub Ac
 | JUnit Platform / Jupiter | 6.1.3 | Runner de Cucumber (`@Suite`) y pruebas unitarias |
 | Serenity Ensure | 5.4.2 | Aserciones en los step definitions, visibles en el reporte |
 | Hamcrest | 3.0 | Matchers en pruebas unitarias |
-| SonarQube plugin | 7.6.0 | Análisis estático (`./gradlew sonar`) |
+| SonarQube plugin | 7.6.0 | Análisis en SonarQube Cloud (`./gradlew sonar`, proyecto `Dyplox_RESTFUL_BOOKERING`) |
+| JaCoCo | 0.8.16 | Cobertura combinada de pruebas unitarias y de API |
 | Gson | 2.15.0 | Serialización de los modelos (`co.booker.utils.Json`) |
 | Docker (`mwinteringham/restfulbooker`) | latest | API local para desarrollo y CI |
 | GitHub Actions | — | CI (`.github/workflows/ci.yml`) |
@@ -223,7 +224,7 @@ Se verificó que las validaciones fallan cuando deben:
 | 1 | El CI nunca se ha ejecutado en GitHub | Verificado en local (actionlint y esquemas oficiales de workflow y Dependabot), pero falta el primer run real |
 | 2 | GitHub Pages sin activar | Hay que elegir una vez *Settings → Pages → Source: GitHub Actions* para que se publique el reporte |
 | 3 | Los POST no se reintentan | A propósito: reintentar un POST puede duplicar datos |
-| 4 | Sin análisis Sonar en CI | Requiere un servidor y `SONAR_TOKEN` |
+| 4 | SonarQube Cloud sin conectar | El CI ya lo ejecuta, pero falta importar el proyecto en sonarcloud.io y crear el secreto `SONAR_TOKEN`; hasta entonces los badges de Sonar muestran "project not found" |
 | 5 | Nombres mezclados en inglés y español | `CrearBooking`/`GuardaToken` frente a `BookingByID`/`DeleteBookingByCookie`; factorías `usuario()`/`delServicio()` sin criterio común |
 
 ## 9. Próximos pasos sugeridos
@@ -231,5 +232,5 @@ Se verificó que las validaciones fallan cuando deben:
 1. Subir la rama y comprobar el primer run del CI; activar GitHub Pages.
 2. Unificar los nombres de tareas y factorías.
 3. Concurrencia (dos PUT simultáneos) y casos de tokens (reutilización, cookie mal formada).
-4. Formato y análisis estático automáticos (Spotless, Checkstyle o Error Prone) y Sonar cuando haya servidor.
+4. Formato y análisis estático automáticos (Spotless, Checkstyle o Error Prone).
 5. Retirar `--add-opens` y `net.bytebuddy.safe=false` cuando Serenity deje de inyectar clases por reflexión.
