@@ -7,6 +7,10 @@ import co.booker.questions.CuerpoRespuesta;
 import co.booker.questions.TiempoRespuestaHttp;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
+import io.cucumber.java.BeforeAll;
+import co.booker.utils.Autenticacion;
+import co.booker.utils.ClienteApi;
+import co.booker.utils.Configuracion;
 import io.cucumber.java.es.Dado;
 import io.cucumber.java.es.Entonces;
 import io.restassured.RestAssured;
@@ -15,7 +19,6 @@ import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.actors.OnStage;
 import net.serenitybdd.screenplay.actors.OnlineCast;
 import net.serenitybdd.screenplay.rest.abilities.CallAnApi;
-import net.thucydides.model.util.EnvironmentVariables;
 
 import static co.booker.utils.Constantes.BOOKING_ID;
 import static co.booker.utils.endpoints.uris.BOOKING;
@@ -34,19 +37,43 @@ import static org.hamcrest.Matchers.lessThan;
  */
 public class ComunDefinition {
 
-    private static final String URL_POR_DEFECTO = "https://restful-booker.herokuapp.com/";
-
-    private EnvironmentVariables environmentVariables;
-    private String urlBase;
+    private static final int INTENTOS_HEALTH_CHECK = 3;
 
     /**
-     * Prepara cada escenario: crea el {@code OnlineCast} y lee {@code restapi.baseurl} de la
-     * configuración de Serenity (por defecto la API pública).
+     * Se ejecuta una vez antes de toda la suite: aplica la configuración global del cliente HTTP
+     * ({@link ClienteApi}) y comprueba que la API del entorno activo responde a {@code GET /ping}.
+     * Si no responde, la suite se detiene con un mensaje claro en lugar de fallar escenario por
+     * escenario. No se ejecuta en el dry-run de {@code validarFeatures}.
      */
+    @BeforeAll
+    public static void verificarApiDisponible() {
+        ClienteApi.configurar();
+        String url = Configuracion.urlBase();
+        String ultimoError = "sin respuesta";
+        for (int intento = 1; intento <= INTENTOS_HEALTH_CHECK; intento++) {
+            try {
+                int codigo = RestAssured.given().baseUri(url).get("ping").statusCode();
+                if (codigo == 201) {
+                    return;
+                }
+                ultimoError = "GET /ping respondió " + codigo;
+            } catch (Exception e) {
+                // RestAssured lanza excepciones checked (p. ej. ConnectException) sin declararlas
+                ultimoError = e.getClass().getSimpleName() + ": " + e.getMessage();
+            }
+            if (intento < INTENTOS_HEALTH_CHECK) {
+                esperar(2000L * intento);
+            }
+        }
+        throw new IllegalStateException("La API no está disponible en " + url + " (" + ultimoError
+                + "). Si usas -Penv=docker, arranca el contenedor: "
+                + "docker run -d -p 3001:3001 mwinteringham/restfulbooker");
+    }
+
+    /** Prepara cada escenario creando el {@code OnlineCast}. */
     @Before
     public void prepararEscenario() {
         OnStage.setTheStage(new OnlineCast());
-        urlBase = environmentVariables.optionalProperty("restapi.baseurl").orElse(URL_POR_DEFECTO);
     }
 
     /**
@@ -59,8 +86,8 @@ public class ComunDefinition {
         try {
             Integer id = theActorInTheSpotlight().recall(BOOKING_ID);
             if (id != null) {
-                RestAssured.given().baseUri(urlBase)
-                        .auth().preemptive().basic("admin", "password123")
+                RestAssured.given().baseUri(Configuracion.urlBase())
+                        .header("Authorization", Autenticacion.basic(Configuracion.usuario(), Configuracion.clave()))
                         .delete(BOOKING.toString() + id);
             }
         } catch (RuntimeException ignorada) {
@@ -71,7 +98,7 @@ public class ComunDefinition {
     /** Crea al actor {@code Abel} con la habilidad de llamar a la API en la URL base. */
     @Dado("que Abel quiere usar la API")
     public void queAbelQuiereUsarLaApi() {
-        theActorCalled("Abel").whoCan(CallAnApi.at(urlBase));
+        theActorCalled("Abel").whoCan(CallAnApi.at(Configuracion.urlBase()));
     }
 
     /**
@@ -145,5 +172,14 @@ public class ComunDefinition {
     public void elTiempoDeRespuestaDeberiaSerMenorA(Integer milisegundos) {
         Actor actor = theActorInTheSpotlight();
         actor.should(seeThat("el tiempo de respuesta (ms)", TiempoRespuestaHttp.fue(), lessThan(milisegundos.longValue())));
+    }
+
+    private static void esperar(long milisegundos) {
+        try {
+            Thread.sleep(milisegundos);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Espera interrumpida", e);
+        }
     }
 }

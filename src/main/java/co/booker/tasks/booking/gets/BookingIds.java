@@ -1,9 +1,9 @@
 package co.booker.tasks.booking.gets;
 
+import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Get;
-import net.serenitybdd.annotations.Step;
 
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
@@ -22,15 +22,9 @@ public class BookingIds implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("Lista de libros en el servicio")
+    @Step("{0} consulta la lista de reservas")
     public <T extends Actor> void performAs(T actor) {
-        actor.attemptsTo(
-                Get.resource(BOOKING.toString())
-                        .with(requestSpecification -> requestSpecification
-                                .header("Content-Type", "application/json")
-                                .relaxedHTTPSValidation()
-                        )
-        );
+        actor.attemptsTo(Get.resource(BOOKING.toString()));
     }
 
     /**

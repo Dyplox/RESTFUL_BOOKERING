@@ -7,7 +7,7 @@ public class Constantes {
      * Clave con la que el actor guarda y recupera el token de autenticación
      * ({@code actor.remember(TOKEN, ...)} / {@code actor.recall(TOKEN)}).
      */
-    public static final String TOKEN = "token vacio";
+    public static final String TOKEN = "token";
 
     /**
      * Clave con la que el actor guarda el {@code bookingid} de la reserva que creó
@@ -16,8 +16,14 @@ public class Constantes {
      */
     public static final String BOOKING_ID = "booking id";
 
-    /** Mensaje base de {@link co.booker.exception.ThreadStoppedException}. */
-    public static final String THREAD_STOPPED_EXCEPTION_MESSAGE = "Esta tarea se detuvo inesperadamente: ";
+    /** Clave con la que el actor guarda la {@link co.booker.models.Booking} que creó. */
+    public static final String RESERVA_CREADA = "reserva creada";
+
+    /**
+     * Clave con la que el actor guarda la última {@link co.booker.models.Booking} que envió en un
+     * POST, PUT o PATCH, para compararla con la respuesta.
+     */
+    public static final String RESERVA_ENVIADA = "reserva enviada";
 
     private Constantes() {
         throw new IllegalStateException("No se debe instanciar la clase");

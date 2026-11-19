@@ -35,15 +35,9 @@ public class BookingEnFormato implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("{0} consulta la reserva #id con Accept #accept")
+    @Step("{0} consulta la reserva #id con Accept '#accept'")
     public <T extends Actor> void performAs(T actor) {
-        actor.attemptsTo(
-                Get.resource(BOOKING + id)
-                        .with(requestSpecification -> requestSpecification
-                                .accept(accept)
-                                .relaxedHTTPSValidation()
-                        )
-        );
+        actor.attemptsTo(Get.resource(BOOKING + id).with(peticion -> peticion.accept(accept)));
     }
 
     /**

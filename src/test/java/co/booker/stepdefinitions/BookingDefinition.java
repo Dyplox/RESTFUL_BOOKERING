@@ -1,5 +1,6 @@
 package co.booker.stepdefinitions;
 
+import co.booker.models.Booking;
 import co.booker.questions.CodigoRespuestaHttp;
 import co.booker.tasks.booking.CrearBooking;
 import co.booker.tasks.booking.EnviarBooking;
@@ -19,12 +20,17 @@ import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
 
 import static co.booker.utils.Constantes.BOOKING_ID;
+import static co.booker.utils.Constantes.RESERVA_CREADA;
+import static co.booker.utils.Constantes.RESERVA_ENVIADA;
+import static co.booker.utils.Json.desde;
 import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
 import static net.serenitybdd.screenplay.actors.OnStage.theActorInTheSpotlight;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 
 /**
  * Step definitions del módulo booking: consultas, creación, actualización y borrado de reservas.
@@ -37,11 +43,14 @@ public class BookingDefinition {
 
     // Precondiciones
 
-    /** Crea una reserva de prueba, verifica que la API respondió 200 y guarda su id en el actor. */
+    /**
+     * Crea una reserva con datos únicos ({@code ReservaFactory.valida()}), verifica que la API
+     * respondió 200 y guarda en el actor su id y sus datos.
+     */
     @Dado("el tiene una reserva creada")
     public void elTieneUnaReservaCreada() {
         Actor actor = theActorInTheSpotlight();
-        actor.attemptsTo(CrearBooking.usuario());
+        actor.attemptsTo(CrearBooking.valida());
         actor.should(seeThat("el código al crear la reserva", CodigoRespuestaHttp.fue(), equalTo(200)));
     }
 
@@ -75,6 +84,37 @@ public class BookingDefinition {
         theActorInTheSpotlight().attemptsTo(BookingByCheck.delServicio(checkIn, checkOut));
     }
 
+    /** Busca reservas por el nombre y el apellido (único) de la reserva creada. */
+    @Cuando("el consulta las reservas con el nombre de la reserva creada")
+    public void elConsultaLasReservasConElNombreDeLaReservaCreada() {
+        Booking creada = reservaCreada();
+        theActorInTheSpotlight().attemptsTo(BookingByName.delServicio(creada.firstname(), creada.lastname()));
+    }
+
+    /**
+     * Busca reservas con un rango de fechas que contiene a la reserva creada (un día antes de su
+     * entrada y un día después de su salida, porque los filtros de la API son estrictos).
+     */
+    @Cuando("el consulta las reservas con fechas que rodean la reserva creada")
+    public void elConsultaLasReservasConFechasQueRodeanLaReservaCreada() {
+        Booking creada = reservaCreada();
+        theActorInTheSpotlight().attemptsTo(BookingByCheck.delServicio(
+                creada.bookingdates().entrada().minusDays(1).toString(),
+                creada.bookingdates().salida().plusDays(1).toString()));
+    }
+
+    /**
+     * Busca reservas que entran después de la entrada de la reserva creada: el filtro es estricto,
+     * así que la reserva creada no debe aparecer.
+     */
+    @Cuando("el consulta las reservas con entrada posterior a la de la reserva creada")
+    public void elConsultaLasReservasConEntradaPosteriorALaDeLaReservaCreada() {
+        Booking creada = reservaCreada();
+        theActorInTheSpotlight().attemptsTo(BookingByCheck.delServicio(
+                creada.bookingdates().entrada().toString(),
+                creada.bookingdates().salida().plusDays(1).toString()));
+    }
+
     /** Consulta la reserva creada en el escenario. */
     @Cuando("el consulta la reserva creada")
     public void elConsultaLaReservaCreada() {
@@ -103,10 +143,10 @@ public class BookingDefinition {
 
     // POST
 
-    /** Crea una reserva con datos fijos (sin verificar la respuesta, para que lo haga el escenario). */
+    /** Crea una reserva con datos únicos (sin verificar la respuesta, para que lo haga el escenario). */
     @Cuando("el crea una reserva")
     public void elCreaUnaReserva() {
-        theActorInTheSpotlight().attemptsTo(CrearBooking.usuario());
+        theActorInTheSpotlight().attemptsTo(CrearBooking.valida());
     }
 
     /**
@@ -143,13 +183,13 @@ public class BookingDefinition {
 
     // PUT / PATCH
 
-    /** Reemplaza la reserva creada (PUT); envía el token del actor si lo tiene. */
+    /** Reemplaza la reserva creada (PUT) con datos nuevos; envía el token del actor si lo tiene. */
     @Cuando("el actualiza la reserva creada")
     public void elActualizaLaReservaCreada() {
         theActorInTheSpotlight().attemptsTo(UpdateBooking.usuario(idReservaCreada()));
     }
 
-    /** Actualiza parcialmente la reserva creada (PATCH); envía el token del actor si lo tiene. */
+    /** Cambia nombre y apellido de la reserva creada (PATCH); envía el token del actor si lo tiene. */
     @Cuando("el actualiza parcialmente la reserva creada")
     public void elActualizaParcialmenteLaReservaCreada() {
         theActorInTheSpotlight().attemptsTo(PartialUpdateBooking.usuario(idReservaCreada()));
@@ -201,6 +241,63 @@ public class BookingDefinition {
         assertThat("ids de la lista de reservas", idsDeLaLista(), hasItem(idReservaCreada()));
     }
 
+    /** Verifica que la lista de reservas de la última respuesta contiene únicamente la reserva creada. */
+    @Entonces("la lista debería contener solo la reserva creada")
+    public void laListaDeberiaContenerSoloLaReservaCreada() {
+        assertThat("ids de la lista de reservas", idsDeLaLista(), contains(idReservaCreada()));
+    }
+
+    /** Verifica que la lista de reservas de la última respuesta no incluye la reserva creada. */
+    @Entonces("la lista no debería contener la reserva creada")
+    public void laListaNoDeberiaContenerLaReservaCreada() {
+        assertThat("ids de la lista de reservas", idsDeLaLista(), not(hasItem(idReservaCreada())));
+    }
+
+    /** Verifica que el body de la última respuesta es exactamente la reserva creada. */
+    @Entonces("la respuesta debería coincidir con la reserva creada")
+    public void laRespuestaDeberiaCoincidirConLaReservaCreada() {
+        assertThat("reserva devuelta", reservaDeLaRespuesta(), equalTo(reservaCreada()));
+    }
+
+    /** Verifica que el body de la última respuesta es exactamente la reserva enviada (PUT). */
+    @Entonces("la respuesta debería coincidir con la reserva enviada")
+    public void laRespuestaDeberiaCoincidirConLaReservaEnviada() {
+        assertThat("reserva devuelta", reservaDeLaRespuesta(), equalTo(reservaEnviada()));
+    }
+
+    /** Verifica que el campo {@code booking} de la respuesta de un POST es la reserva enviada. */
+    @Entonces("la reserva de la respuesta debería coincidir con la enviada")
+    public void laReservaDeLaRespuestaDeberiaCoincidirConLaEnviada() {
+        assertThat("reserva devuelta",
+                desde(SerenityRest.lastResponse().getBody().asString(), "booking", Booking.class),
+                equalTo(reservaEnviada()));
+    }
+
+    /**
+     * Verifica que la respuesta de un PATCH es la reserva creada con los cambios enviados aplicados
+     * (los campos no enviados deben conservarse).
+     */
+    @Entonces("la respuesta debería tener los cambios enviados sobre la reserva creada")
+    public void laRespuestaDeberiaTenerLosCambiosEnviadosSobreLaReservaCreada() {
+        assertThat("reserva devuelta", reservaDeLaRespuesta(), equalTo(reservaCreada().con(reservaEnviada())));
+    }
+
+    /** Vuelve a consultar la reserva creada y verifica que persistió con los datos enviados. */
+    @Entonces("al consultarla de nuevo debería coincidir con la reserva enviada")
+    public void alConsultarlaDeNuevoDeberiaCoincidirConLaReservaEnviada() {
+        Actor actor = theActorInTheSpotlight();
+        actor.attemptsTo(BookingByID.delServicio(idReservaCreada().toString()));
+        actor.should(seeThat("el código al volver a consultar", CodigoRespuestaHttp.fue(), equalTo(200)));
+        assertThat("reserva persistida", reservaDeLaRespuesta(), equalTo(reservaEnviada()));
+    }
+
+    /** Verifica que el cuerpo (XML) de la última respuesta contiene el apellido único de la reserva creada. */
+    @Entonces("el cuerpo de la respuesta debería contener el apellido de la reserva creada en XML")
+    public void elCuerpoDeberiaContenerElApellidoDeLaReservaCreadaEnXml() {
+        assertThat("cuerpo de la respuesta", SerenityRest.lastResponse().getBody().asString(),
+                org.hamcrest.Matchers.containsString("<lastname>" + reservaCreada().lastname() + "</lastname>"));
+    }
+
     /** Verifica que la lista de reservas de la última respuesta está vacía. */
     @Entonces("la lista debería estar vacía")
     public void laListaDeberiaEstarVacia() {
@@ -215,6 +312,26 @@ public class BookingDefinition {
 
     private static java.util.List<Integer> idsDeLaLista() {
         return SerenityRest.lastResponse().jsonPath().getList("bookingid", Integer.class);
+    }
+
+    private static Booking reservaDeLaRespuesta() {
+        return desde(SerenityRest.lastResponse().getBody().asString(), Booking.class);
+    }
+
+    private static Booking reservaCreada() {
+        Booking reserva = theActorInTheSpotlight().recall(RESERVA_CREADA);
+        if (reserva == null) {
+            throw new IllegalStateException("No hay reserva creada en este escenario: falta el paso 'el tiene una reserva creada'");
+        }
+        return reserva;
+    }
+
+    private static Booking reservaEnviada() {
+        Booking reserva = theActorInTheSpotlight().recall(RESERVA_ENVIADA);
+        if (reserva == null) {
+            throw new IllegalStateException("El actor no ha enviado ninguna reserva en este escenario");
+        }
+        return reserva;
     }
 
     private static Integer idReservaCreada() {

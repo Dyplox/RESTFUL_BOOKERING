@@ -1,26 +1,38 @@
 package co.booker.tasks.booking;
 
+import co.booker.models.Booking;
+import co.booker.models.ReservaFactory;
+import net.serenitybdd.annotations.Step;
 import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Post;
-import net.serenitybdd.annotations.Step;
 
 import static co.booker.utils.Constantes.BOOKING_ID;
+import static co.booker.utils.Constantes.RESERVA_CREADA;
+import static co.booker.utils.Constantes.RESERVA_ENVIADA;
+import static co.booker.utils.Json.aJson;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
 /**
  * Tarea que crea una reserva ({@code POST /booking}).
  *
- * <p>Usa un body fijo (Jim Brown, 2018-01-01 a 2019-01-01, Breakfast) construido como texto, e
- * imprime la respuesta en consola. Si la API responde {@code 200}, guarda el {@code bookingid}
- * generado en la memoria del actor bajo {@link co.booker.utils.Constantes#BOOKING_ID}.</p>
+ * <p>Guarda en el actor la reserva enviada ({@code RESERVA_ENVIADA}) y, si la API responde
+ * {@code 200}, también el {@code bookingid} ({@code BOOKING_ID}) y la reserva creada
+ * ({@code RESERVA_CREADA}) para los pasos siguientes y para la limpieza del escenario.</p>
  */
 public class CrearBooking implements Task {
 
-    /** Constructor usado por Serenity al instrumentar la tarea; usar {@link #usuario()}. */
-    public CrearBooking() {
+    private final Booking reserva;
+
+    /**
+     * Constructor usado por Serenity al instrumentar la tarea; usar las factorías estáticas.
+     *
+     * @param reserva reserva a crear
+     */
+    public CrearBooking(Booking reserva) {
+        this.reserva = reserva;
     }
 
     /**
@@ -30,40 +42,32 @@ public class CrearBooking implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("{0} crea una reserva")
+    @Step("{0} crea una reserva para #reserva")
     public <T extends Actor> void performAs(T actor) {
-        String body = "{\n" +
-                "    \"firstname\" : \"Jim\",\n" +
-                "    \"lastname\" : \"Brown\",\n" +
-                "    \"totalprice\" : 111,\n" +
-                "    \"depositpaid\" : true,\n" +
-                "    \"bookingdates\" : {\n" +
-                "        \"checkin\" : \"2018-01-01\",\n" +
-                "        \"checkout\" : \"2019-01-01\"\n" +
-                "    },\n" +
-                "    \"additionalneeds\" : \"Breakfast\"\n" +
-                "}";
-
-        actor.attemptsTo(
-                Post.to(BOOKING.toString())
-                        .with(requestSpecification -> requestSpecification
-                                .header("Content-Type", "application/json")
-                                .body(body)
-                                .relaxedHTTPSValidation()
-                        )
-        );
-        SerenityRest.lastResponse().getBody().prettyPrint();
+        actor.remember(RESERVA_ENVIADA, reserva);
+        actor.attemptsTo(Post.to(BOOKING.toString()).with(peticion -> peticion.body(aJson(reserva))));
         if (SerenityRest.lastResponse().statusCode() == 200) {
             actor.remember(BOOKING_ID, SerenityRest.lastResponse().jsonPath().getInt("bookingid"));
+            actor.remember(RESERVA_CREADA, reserva);
         }
     }
 
     /**
-     * Crea la tarea instrumentada por Serenity.
+     * Crea la tarea con una reserva válida de datos únicos ({@link ReservaFactory#valida()}).
      *
      * @return tarea lista para {@code actor.attemptsTo(...)}
      */
-    public static CrearBooking usuario() {
-        return instrumented(CrearBooking.class);
+    public static CrearBooking valida() {
+        return con(ReservaFactory.valida());
+    }
+
+    /**
+     * Crea la tarea con la reserva indicada.
+     *
+     * @param reserva reserva a crear
+     * @return tarea lista para {@code actor.attemptsTo(...)}
+     */
+    public static CrearBooking con(Booking reserva) {
+        return instrumented(CrearBooking.class, reserva);
     }
 }

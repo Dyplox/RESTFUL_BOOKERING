@@ -13,7 +13,7 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
  *
  * <p>Pensada para casos negativos (campos faltantes, tipos incorrectos, JSON malformado,
  * {@code Content-Type} o {@code Accept} distintos). A diferencia de {@link CrearBooking}, no guarda
- * el {@code bookingid}: el escenario decide qué validar.</p>
+ * nada en el actor: el escenario decide qué validar.</p>
  */
 public class EnviarBooking implements Task {
 
@@ -41,17 +41,10 @@ public class EnviarBooking implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("{0} envía una reserva con Content-Type #contentType y Accept #accept")
+    @Step("{0} envía una reserva con Content-Type '#contentType' y Accept '#accept'")
     public <T extends Actor> void performAs(T actor) {
-        actor.attemptsTo(
-                Post.to(BOOKING.toString())
-                        .with(requestSpecification -> requestSpecification
-                                .contentType(contentType)
-                                .accept(accept)
-                                .body(body)
-                                .relaxedHTTPSValidation()
-                        )
-        );
+        actor.attemptsTo(Post.to(BOOKING.toString())
+                .with(peticion -> peticion.contentType(contentType).accept(accept).body(body)));
     }
 
     /**

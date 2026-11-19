@@ -4,6 +4,7 @@ import co.booker.questions.CampoRespuesta;
 import co.booker.questions.CodigoRespuestaHttp;
 import co.booker.tasks.CrearToken;
 import co.booker.tasks.booking.GuardaToken;
+import co.booker.utils.Configuracion;
 import io.cucumber.java.es.Cuando;
 import io.cucumber.java.es.Dado;
 import net.serenitybdd.screenplay.Actor;
@@ -29,6 +30,12 @@ public class AuthDefinition {
         theActorInTheSpotlight().attemptsTo(CrearToken.usuario(usuario, clave));
     }
 
+    /** Solicita un token con las credenciales del entorno activo ({@code serenity.conf}). */
+    @Cuando("el se autentica con las credenciales configuradas")
+    public void elSeAutenticaConLasCredencialesConfiguradas() {
+        theActorInTheSpotlight().attemptsTo(CrearToken.usuario(Configuracion.usuario(), Configuracion.clave()));
+    }
+
     /** Guarda el token de la última respuesta en la memoria del actor. */
     @Cuando("el guarda el token")
     public void elGuardaElToken() {
@@ -36,13 +43,13 @@ public class AuthDefinition {
     }
 
     /**
-     * Precondición: se autentica con las credenciales públicas de Restful Booker, verifica que
-     * recibió un token y lo guarda en el actor.
+     * Precondición: se autentica con las credenciales del entorno activo, verifica que recibió un
+     * token y lo guarda en el actor.
      */
     @Dado("el está autenticado")
     public void elEstaAutenticado() {
         Actor actor = theActorInTheSpotlight();
-        actor.attemptsTo(CrearToken.usuario("admin", "password123"));
+        actor.attemptsTo(CrearToken.usuario(Configuracion.usuario(), Configuracion.clave()));
         actor.should(
                 seeThat("el código al autenticarse", CodigoRespuestaHttp.fue(), equalTo(200)),
                 seeThat(CampoRespuesta.en("token"), not(emptyOrNullString()))

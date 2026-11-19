@@ -1,19 +1,14 @@
 package co.booker.tasks;
 
+import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Get;
-import net.serenitybdd.annotations.Step;
 
 import static co.booker.utils.endpoints.uris.PING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
-/**
- * Tarea que llama al health check de la API ({@code GET /ping}).
- *
- * <p>Se usa junto con {@link co.booker.questions.TiempoRespuestaHttp} para validar el tiempo de
- * respuesta del servicio.</p>
- */
+/** Tarea que llama al health check de la API ({@code GET /ping}, responde {@code 201}). */
 public class Ping implements Task {
 
     /** Constructor usado por Serenity al instrumentar la tarea; usar {@link #delServicio()}. */
@@ -27,15 +22,9 @@ public class Ping implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("tiempo de respuesta del servicio")
+    @Step("{0} consulta el health check")
     public <T extends Actor> void performAs(T actor) {
-        actor.attemptsTo(
-                Get.resource(PING.toString())
-                        .with(requestSpecification -> requestSpecification
-                        .header("Content-Type", "application/json")
-                        .relaxedHTTPSValidation()
-                )
-        );
+        actor.attemptsTo(Get.resource(PING.toString()));
     }
 
     /**

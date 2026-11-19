@@ -70,6 +70,10 @@ tasks.named('test', Test) {
     useJUnitPlatform {
         includeEngines 'junit-platform-suite'
     }
+    // Entorno de serenity.conf: ./gradlew test -Penv=docker (por defecto, la API pública)
+    if (project.hasProperty('env')) {
+        systemProperty 'environment', project.property('env')
+    }
     if (project.hasProperty('tags')) {
         String tags = project.property('tags').toString()
         ['@defectoConocido', '@rendimiento'].each { excluido ->

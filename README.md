@@ -5,7 +5,7 @@ Pruebas automatizadas de la API pública [Restful Booker](https://restful-booker
 Cubre:
 
 - **Auth**: token con credenciales válidas; 8 combinaciones de credenciales inválidas.
-- **Booking**: CRUD completo, filtros, formato XML y casos negativos (403 sin token o con token inválido, 404, 400, 405, 418). Cada escenario crea su propia reserva y la elimina al terminar.
+- **Booking**: CRUD completo, filtros por nombre y fechas, formato XML y casos negativos (403 sin token o con token inválido, 404, 400, 405, 418). Cada escenario crea su propia reserva con datos únicos y la elimina al terminar.
 - **Ping**: health check y tiempo de respuesta.
 - **Defectos conocidos de la API**: escenarios que documentan los errores intencionados de Restful Booker (excluidos por defecto).
 
@@ -36,7 +36,10 @@ Cada prueba valida el **código HTTP** y, según el caso, la respuesta contra un
 ## Requisitos
 
 - **JDK 27**
-- Conexión a internet para las pruebas de API (las unitarias no la necesitan)
+- Para las pruebas de API, una de estas dos:
+  - **Docker** (recomendado): `docker run -d -p 3001:3001 mwinteringham/restfulbooker`
+  - Conexión a internet, para usar la API pública
+- Las pruebas unitarias no necesitan nada de esto
 
 Gradle no hace falta instalarlo: el proyecto incluye el wrapper.
 
@@ -51,7 +54,8 @@ cd RESTFUL_BOOKERING
 
 ```bash
 # Pruebas de API (todo menos @defectoConocido y @rendimiento) + reporte Serenity
-./gradlew test
+./gradlew test -Penv=docker   # contra el contenedor local (rápido, aislado)
+./gradlew test                # contra la API pública (entorno por defecto)
 
 # Filtrar por tags
 ./gradlew test -Ptags="@smoke"
@@ -88,14 +92,21 @@ Aunque se pase `-Ptags`, `@defectoConocido` y `@rendimiento` se siguen excluyend
 `.github/workflows/ci.yml` se ejecuta en cada push a `main`, en cada pull request, a diario (06:00 UTC, para detectar cambios en la API pública) y a mano con una expresión de tags opcional:
 
 1. **verificacion** (sin red): `unitTest`, `validarFeatures` y `javadoc`.
-2. **api** (si el anterior pasa): `./gradlew test`. En la ejecución diaria también corre `@rendimiento` a título informativo.
+2. **api** (si el anterior pasa):
+   - En push y PR, contra un contenedor de Restful Booker levantado como *service*.
+   - En la ejecución diaria, contra la API pública, para detectar si cambia. También corre `@rendimiento`, a título informativo.
+   - En la ejecución manual se elige el entorno.
 
 El reporte de Serenity y los resultados JUnit se publican como artefactos aunque haya fallos.
 
 ## Configuración
 
-- **URL base**: `restapi.baseurl` en `serenity.properties`.
+- **Entornos y credenciales**: `src/test/resources/serenity.conf`. Hay tres entornos: `default`/`publico` (API pública) y `docker` (`localhost:3001`); se elige con `-Penv`. Las credenciales se pueden sobrescribir con las variables de entorno `RESTFUL_BOOKER_USUARIO` y `RESTFUL_BOOKER_CLAVE`.
 - **Cucumber** (glue, plugins, filtro de tags por defecto, paralelismo): `src/test/resources/junit-platform.properties`.
+- **Cliente HTTP**: lo configura `ClienteApi` una sola vez:
+  - Cabeceras JSON comunes.
+  - Reintento ante 502, 503, 504 o errores de conexión, solo en métodos idempotentes.
+  - Antes de empezar, la suite comprueba que la API responde y, si no, se detiene con un mensaje claro.
 
 ## Estructura
 
@@ -103,17 +114,18 @@ El reporte de Serenity y los resultados JUnit se publican como artefactos aunque
 src/main/java/co/booker/
 ├── tasks/        Acciones del actor (auth, ping y CRUD de booking)
 ├── questions/    Lecturas de la respuesta (código, tiempo, campo JSON, cabecera, cuerpo)
-├── models/       Modelos de datos
-└── utils/        Endpoints, constantes y autenticación
+├── models/       Booking y BookingDates (records) y ReservaFactory (datos únicos por escenario)
+└── utils/        Configuración, cliente HTTP, reintentos, JSON, autenticación, endpoints y constantes
 
 src/test/java/co/booker/
 ├── runners/          CucumberTestSuite: una sola suite, se filtra por tags
 ├── stepdefinitions/  Pasos Cucumber → tareas Screenplay (ComunDefinition tiene hooks y validaciones)
-└── unitarias/        Pruebas unitarias (esquemas JSON, autenticación, utilidades)
+└── unitarias/        Pruebas unitarias (esquemas, fábrica de datos, reintentos, configuración…)
 
 src/test/resources/
 ├── features/                  auth, booking, ping (.feature)
 ├── *.json                     JSON Schema de cada respuesta
+├── serenity.conf              Entornos y credenciales
 └── junit-platform.properties  Configuración de Cucumber
 ```
 
@@ -132,11 +144,11 @@ Escenario: Eliminar una reserva sin token devuelve 403 y no la borra
 
 | Suite | Pruebas | Resultado |
 |---|---|---|
-| API (por defecto) | 32 | ✅ todas pasan, también en paralelo y en ejecuciones repetidas |
+| API (por defecto) | 33 | ✅ en Docker (~3 s) y en la API pública (~9 s), en paralelo y en ejecuciones repetidas |
 | `@defectoConocido` | 5 | ❌ fallan a propósito: documentan errores de la API |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 31 | ✅ |
-| Validación de features | 38 escenarios | ✅ todos los pasos implementados |
+| Unitarias | 47 | ✅ |
+| Validación de features | 39 escenarios | ✅ todos los pasos implementados |
 
 ## Autor
 

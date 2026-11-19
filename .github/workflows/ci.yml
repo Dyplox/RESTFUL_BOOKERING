@@ -9,6 +9,11 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
+      entorno:
+        description: 'Entorno de serenity.conf'
+        type: choice
+        options: [docker, publico]
+        default: docker
       tags:
         description: 'Expresión de tags de Cucumber (vacío = todo menos @defectoConocido y @rendimiento)'
         required: false
@@ -54,10 +59,19 @@ jobs:
           if-no-files-found: ignore
 
   api:
-    name: Pruebas de API (Restful Booker)
+    name: Pruebas de API (${{ github.event_name == 'schedule' && 'publico' || inputs.entorno || 'docker' }})
     needs: verificacion
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Push y PR: contenedor local (rápido y aislado). Diario: API pública, para detectar cambios en ella.
+      ENTORNO: ${{ github.event_name == 'schedule' && 'publico' || inputs.entorno || 'docker' }}
+      TAGS: ${{ inputs.tags }}
+    services:
+      restfulbooker:
+        image: mwinteringham/restfulbooker:latest
+        ports:
+          - 3001:3001
     steps:
       - uses: actions/checkout@v4
 
@@ -68,27 +82,36 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Esperar a que el contenedor de Restful Booker responda
+        if: env.ENTORNO == 'docker'
+        run: |
+          for i in $(seq 1 30); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001/ping)" = "201" ]; then
+              echo "Restful Booker listo"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Restful Booker no respondió en 60 s"; exit 1
+
       - name: Pruebas de API
-        env:
-          TAGS: ${{ inputs.tags }}
         run: |
           if [ -n "$TAGS" ]; then
-            ./gradlew test -Ptags="$TAGS"
+            ./gradlew test -Penv="$ENTORNO" -Ptags="$TAGS"
           else
-            ./gradlew test
+            ./gradlew test -Penv="$ENTORNO"
           fi
 
-      # Solo en la ejecución nocturna, a título informativo: depende de la latencia de la red
+      # Solo en la ejecución diaria, a título informativo: depende de la latencia de la red
       - name: Pruebas de rendimiento (informativo)
         if: github.event_name == 'schedule'
         continue-on-error: true
-        run: ./gradlew test -Ptags="@rendimiento"
+        run: ./gradlew test -Penv="$ENTORNO" -Ptags="@rendimiento"
 
       - name: Publicar reporte de Serenity
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reporte-serenity
+          name: reporte-serenity-${{ env.ENTORNO }}
           path: target/site/serenity/
           if-no-files-found: ignore
 
@@ -96,6 +119,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: resultados-api
+          name: resultados-api-${{ env.ENTORNO }}
           path: build/test-results/test/
           if-no-files-found: ignore

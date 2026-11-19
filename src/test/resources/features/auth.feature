@@ -13,7 +13,7 @@ Característica: Autenticación en Restful Booker
 
   @smoke
   Escenario: Iniciar sesión con usuario y contraseña válidos
-    Cuando el se autentica con usuario "admin" y contraseña "password123"
+    Cuando el se autentica con las credenciales configuradas
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "token.json"
     Y el tiempo de respuesta debería ser menor a 1500 ms

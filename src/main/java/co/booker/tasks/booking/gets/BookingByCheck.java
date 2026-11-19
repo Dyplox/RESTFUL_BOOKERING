@@ -1,9 +1,9 @@
 package co.booker.tasks.booking.gets;
 
+import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Get;
-import net.serenitybdd.annotations.Step;
 
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
@@ -11,13 +11,13 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
 /**
  * Tarea que filtra las reservas por fechas ({@code GET /booking?checkin=&checkout=}).
  *
- * <p>Nota: la descripción de su {@code @Step} ("Obtener libro por Nombre") está copiada de
- * {@link BookingByName} y no corresponde a esta tarea.</p>
+ * <p>Los filtros de la API son estrictos: {@code checkin} devuelve reservas que entran
+ * <b>después</b> de esa fecha y {@code checkout}, reservas que salen <b>antes</b>.</p>
  */
 public class BookingByCheck implements Task {
 
-    private String checkIn;
-    private String checkOut;
+    private final String checkIn;
+    private final String checkOut;
 
     /**
      * Constructor usado por Serenity al instrumentar la tarea; usar {@link #delServicio(String, String)}.
@@ -37,18 +37,10 @@ public class BookingByCheck implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("Obtener libro por Nombre")
+    @Step("{0} busca reservas con entrada después de #checkIn y salida antes de #checkOut")
     public <T extends Actor> void performAs(T actor) {
-        String queryParams = "?checkin=" + checkIn +
-                "&checkout=" + checkOut;
-
-        actor.attemptsTo(
-                Get.resource(BOOKING + queryParams)
-                        .with(requestSpecification -> requestSpecification
-                                .header("Content-Type", "application/json")
-                                .relaxedHTTPSValidation()
-                        )
-        );
+        actor.attemptsTo(Get.resource(BOOKING.toString())
+                .with(peticion -> peticion.queryParam("checkin", checkIn).queryParam("checkout", checkOut)));
     }
 
     /**

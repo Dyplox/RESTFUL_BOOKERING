@@ -4,8 +4,8 @@
 
 @booking
 Característica: Gestión de reservas en Restful Booker
-  Cada escenario crea su propia reserva y trabaja sobre ella, sin depender de datos existentes
-  en la API pública. La reserva se elimina al terminar el escenario.
+  Cada escenario crea su propia reserva, con apellido y fechas únicos, y trabaja sobre ella sin
+  depender de datos existentes en la API. La reserva se elimina al terminar el escenario.
 
   Antecedentes:
     Dado que Abel quiere usar la API
@@ -21,10 +21,10 @@ Característica: Gestión de reservas en Restful Booker
 
   Escenario: Filtrar reservas por nombre y apellido
     Dado el tiene una reserva creada
-    Cuando el consulta las reservas con nombre "Jim" y apellido "Brown"
+    Cuando el consulta las reservas con el nombre de la reserva creada
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "getBookingIds.json"
-    Y la lista debería contener la reserva creada
+    Y la lista debería contener solo la reserva creada
 
   @negativo
   Escenario: Filtrar reservas por un nombre que no existe devuelve una lista vacía
@@ -33,10 +33,20 @@ Característica: Gestión de reservas en Restful Booker
     Y la respuesta debería cumplir el esquema "getBookingIds.json"
     Y la lista debería estar vacía
 
-  Escenario: Filtrar reservas por fechas de check-in y check-out
-    Cuando el consulta las reservas con check-in "2018-01-01" y check-out "2019-01-01"
+  # Los filtros de fecha son estrictos: checkin = entra DESPUÉS de la fecha, checkout = sale ANTES
+  Escenario: Filtrar reservas por un rango de fechas que contiene la reserva
+    Dado el tiene una reserva creada
+    Cuando el consulta las reservas con fechas que rodean la reserva creada
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "getBookingIds.json"
+    Y la lista debería contener la reserva creada
+
+  Escenario: Filtrar reservas por fechas excluye las que entran el mismo día del filtro
+    Dado el tiene una reserva creada
+    Cuando el consulta las reservas con entrada posterior a la de la reserva creada
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería cumplir el esquema "getBookingIds.json"
+    Y la lista no debería contener la reserva creada
 
   @smoke
   Escenario: Consultar una reserva por su id
@@ -44,15 +54,13 @@ Característica: Gestión de reservas en Restful Booker
     Cuando el consulta la reserva creada
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "booking.json"
-    Y el campo "firstname" de la respuesta debería ser "Jim"
-    Y el campo "lastname" de la respuesta debería ser "Brown"
-    Y el campo "bookingdates.checkin" de la respuesta debería ser "2018-01-01"
+    Y la respuesta debería coincidir con la reserva creada
 
   Escenario: Consultar una reserva en formato XML
     Dado el tiene una reserva creada
     Cuando el consulta la reserva creada en formato "application/xml"
     Entonces el código de respuesta debería ser 200
-    Y el cuerpo de la respuesta debería contener "<firstname>Jim</firstname>"
+    Y el cuerpo de la respuesta debería contener el apellido de la reserva creada en XML
 
   @negativo
   Esquema del escenario: Consultar una reserva que no existe devuelve 404 (<caso>)
@@ -81,8 +89,7 @@ Característica: Gestión de reservas en Restful Booker
     Cuando el crea una reserva
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "postBooking.json"
-    Y el campo "booking.firstname" de la respuesta debería ser "Jim"
-    Y el campo "booking.totalprice" de la respuesta debería ser "111"
+    Y la reserva de la respuesta debería coincidir con la enviada
 
   @negativo
   Escenario: Crear una reserva con JSON malformado devuelve 400
@@ -101,9 +108,8 @@ Característica: Gestión de reservas en Restful Booker
     Cuando el actualiza la reserva creada
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "booking.json"
-    Y el campo "firstname" de la respuesta debería ser "Juan"
-    Y el campo "totalprice" de la respuesta debería ser "9898"
-    Y el campo "additionalneeds" de la respuesta debería ser "lunch"
+    Y la respuesta debería coincidir con la reserva enviada
+    Y al consultarla de nuevo debería coincidir con la reserva enviada
 
   Escenario: Actualizar parcialmente una reserva
     Dado el tiene una reserva creada
@@ -111,10 +117,8 @@ Característica: Gestión de reservas en Restful Booker
     Cuando el actualiza parcialmente la reserva creada
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "booking.json"
-    Y el campo "firstname" de la respuesta debería ser "Jose"
-    Y el campo "lastname" de la respuesta debería ser "Gutierrez Rendon"
-    # PATCH no debe tocar los campos que no se envían
-    Y el campo "totalprice" de la respuesta debería ser "111"
+    # PATCH cambia nombre y apellido y debe conservar el resto de la reserva
+    Y la respuesta debería tener los cambios enviados sobre la reserva creada
 
   @negativo
   Escenario: Actualizar una reserva sin token devuelve 403

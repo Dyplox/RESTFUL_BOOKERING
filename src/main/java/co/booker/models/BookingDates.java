@@ -1,37 +1,33 @@
 package co.booker.models;
 
-import java.util.Date;
+import java.time.LocalDate;
 
-/** Fechas de entrada ({@code checkin}) y salida ({@code checkout}) de una reserva. */
-public class BookingDates {
-
-    private Date checkin;
-    private Date checkout;
+/**
+ * Fechas de una reserva, en formato {@code yyyy-MM-dd} como las devuelve la API.
+ *
+ * @param checkin  fecha de entrada
+ * @param checkout fecha de salida
+ */
+public record BookingDates(String checkin, String checkout) {
 
     /**
-     * Crea el rango de fechas.
+     * Crea las fechas a partir de {@link LocalDate}.
      *
      * @param checkin  fecha de entrada
      * @param checkout fecha de salida
+     * @return fechas en formato ISO
      */
-    public BookingDates(Date checkin, Date checkout) {
-        this.checkin = checkin;
-        this.checkout = checkout;
+    public static BookingDates de(LocalDate checkin, LocalDate checkout) {
+        return new BookingDates(checkin.toString(), checkout.toString());
     }
 
-    public Date getCheckin() {
-        return checkin;
+    /** @return la fecha de entrada como {@link LocalDate} */
+    public LocalDate entrada() {
+        return LocalDate.parse(checkin);
     }
 
-    public void setCheckin(Date checkin) {
-        this.checkin = checkin;
-    }
-
-    public Date getCheckout() {
-        return checkout;
-    }
-
-    public void setCheckout(Date checkout) {
-        this.checkout = checkout;
+    /** @return la fecha de salida como {@link LocalDate} */
+    public LocalDate salida() {
+        return LocalDate.parse(checkout);
     }
 }

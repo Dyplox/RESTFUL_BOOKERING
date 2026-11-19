@@ -1,6 +1,7 @@
 package co.booker.tasks.booking.deletes;
 
 import co.booker.utils.Autenticacion;
+import co.booker.utils.Configuracion;
 import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
@@ -44,23 +45,18 @@ public class DeleteBookingBasicAuth implements Task {
     @Override
     @Step("{0} elimina la reserva #id con Basic Auth (usuario #usuario)")
     public <T extends Actor> void performAs(T actor) {
-        actor.attemptsTo(
-                Delete.from(BOOKING + id)
-                        .with(requestSpecification -> requestSpecification
-                                .header("Authorization", Autenticacion.basic(usuario, clave))
-                                .relaxedHTTPSValidation()
-                        )
-        );
+        actor.attemptsTo(Delete.from(BOOKING + id)
+                .with(peticion -> peticion.header("Authorization", Autenticacion.basic(usuario, clave))));
     }
 
     /**
-     * Crea la tarea con las credenciales públicas de Restful Booker ({@code admin/password123}).
+     * Crea la tarea con las credenciales del entorno activo ({@link Configuracion}).
      *
      * @param id identificador de la reserva a eliminar
      * @return tarea lista para {@code actor.attemptsTo(...)}
      */
     public static DeleteBookingBasicAuth delServicio(String id) {
-        return conCredenciales(id, "admin", "password123");
+        return conCredenciales(id, Configuracion.usuario(), Configuracion.clave());
     }
 
     /**
