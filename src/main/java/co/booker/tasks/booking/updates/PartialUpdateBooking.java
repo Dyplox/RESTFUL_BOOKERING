@@ -6,6 +6,7 @@ import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Patch;
 import net.serenitybdd.annotations.Step;
 
+import static co.booker.utils.Autenticacion.conToken;
 import static co.booker.utils.Constantes.TOKEN;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
@@ -14,7 +15,7 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
  * Tarea que actualiza parcialmente una reserva ({@code PATCH /booking/{id}}).
  *
  * <p>Solo cambia {@code firstname} y {@code lastname} (Jose Gutierrez Rendon). Se autentica con
- * la cabecera {@code Cookie: token=...}, usando el token guardado por
+ * la cookie {@code token} (solo si el actor tiene token), usando el token guardado por
  * {@link co.booker.tasks.booking.GuardaToken}. Nota: la descripción de su {@code @Step}
  * ("create the token") está copiada y no corresponde a esta tarea.</p>
  */
@@ -48,9 +49,8 @@ public class PartialUpdateBooking implements Task {
 
         actor.attemptsTo(
                 Patch.to(BOOKING.toString() + id)
-                        .with(requestSpecification -> requestSpecification
+                        .with(requestSpecification -> conToken(requestSpecification, token)
                                 .header("Content-Type", "application/json")
-                                .header("Cookie", "token=" + token)
                                 .body(body)
                                 .relaxedHTTPSValidation()
                         )

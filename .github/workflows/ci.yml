@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Todos los días a las 06:00 UTC: detecta cambios en la API pública aunque no haya commits
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Expresión de tags de Cucumber (vacío = todo menos @defectoConocido y @rendimiento)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verificacion:
+    name: Unitarias, features y Javadoc (sin red)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '27'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pruebas unitarias
+        run: ./gradlew unitTest
+
+      - name: Validar que todos los pasos de las features están implementados
+        run: ./gradlew validarFeatures
+
+      - name: Javadoc
+        run: ./gradlew javadoc
+
+      - name: Publicar resultados unitarios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-unitarios
+          path: build/test-results/unitTest/
+          if-no-files-found: ignore
+
+  api:
+    name: Pruebas de API (Restful Booker)
+    needs: verificacion
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '27'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pruebas de API
+        env:
+          TAGS: ${{ inputs.tags }}
+        run: |
+          if [ -n "$TAGS" ]; then
+            ./gradlew test -Ptags="$TAGS"
+          else
+            ./gradlew test
+          fi
+
+      # Solo en la ejecución nocturna, a título informativo: depende de la latencia de la red
+      - name: Pruebas de rendimiento (informativo)
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: ./gradlew test -Ptags="@rendimiento"
+
+      - name: Publicar reporte de Serenity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-serenity
+          path: target/site/serenity/
+          if-no-files-found: ignore
+
+      - name: Publicar resultados JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-api
+          path: build/test-results/test/
+          if-no-files-found: ignore

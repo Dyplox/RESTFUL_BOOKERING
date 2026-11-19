@@ -1,5 +1,6 @@
 package co.booker.tasks.booking;
 
+import net.serenitybdd.annotations.Step;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 
@@ -13,21 +14,11 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
  *
  * <p>Debe ejecutarse justo después de {@link co.booker.tasks.CrearToken}. Las tareas de
  * actualización y borrado por cookie lo recuperan con {@code actor.recall(TOKEN)}.</p>
- *
- * <p><b>Defecto conocido:</b> {@link #ingreso()} instrumenta la clase sin argumentos, pero el único
- * constructor recibe un {@code String}; Serenity no puede crear la instancia y el paso falla con
- * {@code NullPointerException}. Ver {@code docs/CONTEXTO.md}.</p>
  */
 public class GuardaToken implements Task {
-    private String token;
 
-    /**
-     * Constructor de la tarea.
-     *
-     * @param token valor inicial del token; se sobrescribe con el de la última respuesta al ejecutar
-     */
-    public GuardaToken(String token) {
-        this.token = token;
+    /** Constructor usado por Serenity al instrumentar la tarea; usar {@link #ingreso()}. */
+    public GuardaToken() {
     }
 
     /**
@@ -37,8 +28,9 @@ public class GuardaToken implements Task {
      * @param <T>   tipo del actor
      */
     @Override
+    @Step("{0} guarda el token de autenticación")
     public <T extends Actor> void performAs(T actor) {
-        token = lastResponse().getBody().jsonPath().get("token");
+        String token = lastResponse().jsonPath().getString("token");
         actor.remember(TOKEN, token);
     }
 

@@ -41,6 +41,7 @@ dependencies {
 
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.platform:junit-platform-suite'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -52,14 +53,70 @@ tasks.withType(Javadoc).configureEach {
 }
 
 tasks.withType(Test).configureEach {
-    useJUnitPlatform()
     // Serenity REST (RestSpecificationFactory) inyecta clases con ByteBuddy mediante reflexión sobre
     // ClassLoader.defineClass; en Java 26+ hay que abrir java.lang y habilitar la vía Unsafe explícitamente.
     // Ojo: en Java 26+ net.bytebuddy.safe vale true por defecto y es 'false' lo que reactiva Unsafe
     // (el mensaje de error de ByteBuddy dice lo contrario).
     jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
     systemProperty 'net.bytebuddy.safe', 'false'
-    ignoreFailures = true
-    gradle.startParameter.continueOnFailure = true
+}
+
+// Pruebas de API (Cucumber + Serenity) contra la API real. Filtrar con: ./gradlew test -Ptags="@smoke"
+// Sin -Ptags se usa el filtro de junit-platform.properties (todo menos @defectoConocido y @rendimiento).
+// Con -Ptags, esos dos tags se siguen excluyendo salvo que la expresión los mencione explícitamente.
+// Si una prueba falla, el build falla; el reporte de Serenity se genera igual (finalizedBy).
+tasks.named('test', Test) {
+    description = 'Ejecuta las pruebas de API (Cucumber) contra Restful Booker.'
+    useJUnitPlatform {
+        includeEngines 'junit-platform-suite'
+    }
+    if (project.hasProperty('tags')) {
+        String tags = project.property('tags').toString()
+        ['@defectoConocido', '@rendimiento'].each { excluido ->
+            if (!tags.contains(excluido)) {
+                tags = "(${tags}) and not ${excluido}"
+            }
+        }
+        systemProperty 'cucumber.filter.tags', tags
+    }
+    // Cada ejecución consulta una API externa: nunca se considera "al día"
+    outputs.upToDateWhen { false }
+    // Borra los resultados de Serenity de ejecuciones anteriores para que el reporte no las mezcle
+    dependsOn 'clearReports'
     finalizedBy(aggregate)
+}
+
+// El reporte se regenera siempre después de 'test' (Gradle lo daba por "al día" y dejaba uno viejo)
+tasks.named('aggregate') {
+    outputs.upToDateWhen { false }
+}
+
+// Pruebas unitarias (JUnit Jupiter): no usan red, son rápidas
+tasks.register('unitTest', Test) {
+    description = 'Ejecuta las pruebas unitarias (sin red).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter'
+    }
+}
+
+// Valida sin red que cada paso de las features tiene su step definition (dry-run de Cucumber)
+tasks.register('validarFeatures', Test) {
+    description = 'Comprueba en dry-run que todos los pasos de las features están implementados.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeEngines 'junit-platform-suite'
+    }
+    systemProperty 'cucumber.execution.dry-run', 'true'
+    systemProperty 'cucumber.plugin', 'summary'
+    systemProperty 'cucumber.filter.tags', 'not @ninguno'
+    systemProperty 'cucumber.execution.parallel.enabled', 'false'
+}
+
+tasks.named('check') {
+    dependsOn 'unitTest', 'validarFeatures'
 }

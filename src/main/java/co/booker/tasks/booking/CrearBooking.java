@@ -6,6 +6,7 @@ import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Post;
 import net.serenitybdd.annotations.Step;
 
+import static co.booker.utils.Constantes.BOOKING_ID;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
@@ -13,7 +14,8 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
  * Tarea que crea una reserva ({@code POST /booking}).
  *
  * <p>Usa un body fijo (Jim Brown, 2018-01-01 a 2019-01-01, Breakfast) construido como texto, e
- * imprime la respuesta en consola. La respuesta incluye el {@code bookingid} generado.</p>
+ * imprime la respuesta en consola. Si la API responde {@code 200}, guarda el {@code bookingid}
+ * generado en la memoria del actor bajo {@link co.booker.utils.Constantes#BOOKING_ID}.</p>
  */
 public class CrearBooking implements Task {
 
@@ -28,7 +30,7 @@ public class CrearBooking implements Task {
      * @param <T>   tipo del actor
      */
     @Override
-    @Step("create the new booking")
+    @Step("{0} crea una reserva")
     public <T extends Actor> void performAs(T actor) {
         String body = "{\n" +
                 "    \"firstname\" : \"Jim\",\n" +
@@ -51,6 +53,9 @@ public class CrearBooking implements Task {
                         )
         );
         SerenityRest.lastResponse().getBody().prettyPrint();
+        if (SerenityRest.lastResponse().statusCode() == 200) {
+            actor.remember(BOOKING_ID, SerenityRest.lastResponse().jsonPath().getInt("bookingid"));
+        }
     }
 
     /**

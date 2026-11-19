@@ -1,20 +1,20 @@
 # Contexto del proyecto — RESTFUL_BOOKERING
 
-Documento de referencia técnica: qué es el proyecto, cómo está construido, cómo fluye una prueba y qué problemas conocidos tiene. Para instalar y ejecutar, ver el [README](../README.md).
+Documento de referencia técnica: qué es el proyecto, cómo está construido, cómo fluye una prueba y qué queda pendiente. Para instalar y ejecutar, ver el [README](../README.md).
 
 ---
 
 ## 1. Qué es
 
-Suite de **pruebas automatizadas de API** (no una API) contra [Restful Booker](https://restful-booker.herokuapp.com/), una API pública de reservas de hotel diseñada para practicar testing. La API se reinicia periódicamente y sus datos cambian, lo que afecta a las pruebas que usan IDs fijos (ver §8).
-
-Cubre tres módulos de la API:
+Suite de **pruebas automatizadas de API** (no una API) contra [Restful Booker](https://restful-booker.herokuapp.com/), una API pública de reservas de hotel diseñada para practicar testing, con errores introducidos a propósito. La API se reinicia periódicamente; por eso cada escenario crea y elimina sus propios datos.
 
 | Módulo | Endpoint | Qué se prueba |
 |---|---|---|
-| Auth | `POST /auth` | Generación de token con credenciales válidas e inválidas, tiempo de respuesta |
-| Booking | `GET/POST/PUT/PATCH/DELETE /booking` | CRUD completo, filtros por nombre y fechas, borrado por cookie y por Basic Auth |
+| Auth | `POST /auth` | Token con credenciales válidas; 8 combinaciones inválidas; tiempo de respuesta |
+| Booking | `GET/POST/PUT/PATCH/DELETE /booking` | CRUD, filtros, XML, casos negativos (403, 404, 400, 405, 418) y defectos conocidos |
 | Ping | `GET /ping` | Health check y tiempo de respuesta |
+
+Además hay **pruebas unitarias** (sin red) y un pipeline de **CI** en GitHub Actions.
 
 ## 2. Stack técnico
 
@@ -25,28 +25,27 @@ Cubre tres módulos de la API:
 | Serenity BDD | 5.4.2 | Framework de pruebas + reportes HTML |
 | Serenity Screenplay REST | 5.4.2 | Interacciones HTTP (`Get`, `Post`, `Put`, `Patch`, `Delete`) |
 | RestAssured | 6.3.0 | Motor HTTP bajo Serenity (`SerenityRest`) |
-| json-schema-validator | 5.3.0 | Validación de cuerpo contra esquema |
-| Cucumber | 8.1.0 | Escenarios BDD en español (`# language: es`), motor JUnit Platform |
-| JUnit Platform | 6.1.3 | Runners como `@Suite` (`junit-platform-suite`) |
+| json-schema-validator | 6.3.0 | Validación del cuerpo contra JSON Schema (draft-04) |
+| Cucumber | 8.1.0 | Escenarios BDD en español (`# language: es`), motor JUnit Platform, en paralelo |
+| JUnit Platform / Jupiter | 6.1.3 | Runner de Cucumber (`@Suite`) y pruebas unitarias |
 | Hamcrest | 3.0 | Matchers de aserción |
 | SonarQube plugin | 7.6.0 | Análisis estático (`./gradlew sonar`) |
-
-> El `pom.xml` es un resto de una plantilla Maven; el build real es **Gradle**.
+| GitHub Actions | — | CI (`.github/workflows/ci.yml`) |
 
 ### Ajustes necesarios para Java 27
 
-Serenity REST (`RestSpecificationFactory`) genera clases en tiempo de ejecución con ByteBuddy inyectándolas por reflexión en `ClassLoader.defineClass`. Desde Java 26 eso está bloqueado por defecto, así que la tarea `test` añade:
+Serenity REST (`RestSpecificationFactory`) genera clases en tiempo de ejecución con ByteBuddy inyectándolas por reflexión en `ClassLoader.defineClass`. Desde Java 26 eso está bloqueado por defecto, así que todas las tareas `Test` añaden:
 
 ```groovy
 jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'   // permite la reflexión sobre ClassLoader
 systemProperty 'net.bytebuddy.safe', 'false'                 // reactiva la vía Unsafe de ByteBuddy
 ```
 
-Ojo: el mensaje de error de ByteBuddy pide poner `net.bytebuddy.safe` a `true`, pero en Java 26+ su valor por defecto ya es `true` y es `false` lo que funciona (verificado en el bytecode de ByteBuddy 1.18.15). Sin estos dos ajustes todas las pruebas fallan con `Could not initialize class RestSpecificationFactory`. Se podrán retirar cuando Serenity cambie a inyección por `MethodHandles.Lookup`.
+Ojo: el mensaje de error de ByteBuddy pide poner `net.bytebuddy.safe` a `true`, pero en Java 26+ su valor por defecto ya es `true` y es `false` lo que funciona (verificado en el bytecode de ByteBuddy 1.18.15). Sin estos dos ajustes todas las pruebas de API fallan con `Could not initialize class RestSpecificationFactory`.
 
 ## 3. Patrón Screenplay
 
-El proyecto sigue **Screenplay**: un *Actor* (`Abel`) tiene *Habilidades* (`CallAnApi`), ejecuta *Tareas* (`Task`) y responde *Preguntas* (`Question`).
+Un *Actor* (`Abel`) tiene *Habilidades* (`CallAnApi`), ejecuta *Tareas* (`Task`) y responde *Preguntas* (`Question`).
 
 ```
 Feature (.feature, español)
@@ -57,7 +56,7 @@ Step Definitions (src/test/.../stepdefinitions)
    ▼
 Tasks (src/main/.../tasks)  ──►  Interacciones Serenity REST  ──►  RestAssured  ──►  API
    ▲
-Questions (src/main/.../questions)  ◄── SerenityRest.lastResponse()
+Questions (src/main/.../questions)  ◄── SerenityRest.lastResponse()  (por hilo)
 ```
 
 ## 4. Estructura
@@ -65,84 +64,143 @@ Questions (src/main/.../questions)  ◄── SerenityRest.lastResponse()
 ```
 src/main/java/co/booker/
 ├── tasks/
-│   ├── CrearToken.java            POST /auth con usuario y contraseña
-│   ├── Ping.java                  GET /ping
+│   ├── CrearToken.java              POST /auth con usuario y contraseña
+│   ├── Ping.java                    GET /ping
 │   └── booking/
-│       ├── CrearBooking.java      POST /booking (body fijo "Jim Brown")
-│       ├── GuardaToken.java       Lee "token" de la última respuesta y lo guarda en la memoria del actor
-│       ├── gets/                  BookingIds, BookingByName, BookingByCheck, BookingByID
-│       ├── updates/               UpdateBooking (PUT), PartialUpdateBooking (PATCH) — usan cookie token
-│       └── deletes/               DeleteBookingByCookie, DeleteBookingBasicAuth
-├── questions/
-│   ├── CodigoRespuestaHttp.java   status code de la última respuesta
-│   └── TiempoRespuestaHttp.java   tiempo de respuesta en ms
-├── models/                        Booking, BookingDates (+ User, Location, builders: restos de plantilla, sin uso)
+│       ├── CrearBooking.java        POST /booking (body fijo "Jim Brown"); guarda el bookingid
+│       ├── EnviarBooking.java       POST /booking con body, Content-Type y Accept arbitrarios (casos negativos)
+│       ├── GuardaToken.java         Guarda el "token" de la última respuesta en el actor
+│       ├── gets/                    BookingIds, BookingByName, BookingByCheck, BookingByID, BookingEnFormato (Accept)
+│       ├── updates/                 UpdateBooking (PUT), PartialUpdateBooking (PATCH): cookie solo si hay token
+│       └── deletes/                 DeleteBookingByCookie, DeleteBookingBasicAuth (credenciales configurables)
+├── questions/                       CodigoRespuestaHttp, TiempoRespuestaHttp, CampoRespuesta, CabeceraRespuesta, CuerpoRespuesta
+├── models/                          Booking, BookingDates (+ User, Location, builders: restos de plantilla, sin uso)
 ├── utils/
-│   ├── endpoints/uris.java        enum AUTH="auth", BOOKING="booking/", PING="ping"
-│   ├── Constantes.java            clave TOKEN para actor.remember/recall
+│   ├── endpoints/uris.java          enum AUTH="auth", BOOKING="booking/", PING="ping"
+│   ├── Autenticacion.java           conToken (cookie opcional) y basic (cabecera Basic en Base64)
+│   ├── Constantes.java              claves TOKEN y BOOKING_ID para actor.remember/recall
 │   └── Esperar.java, Builder.java
-└── exception/                     ThreadStoppedException, ExceptionErrors
+└── exception/                       ThreadStoppedException, ExceptionErrors
 
 src/test/java/co/booker/
-├── runners/                       AuthRunner, BookingRunner, PingRunner (un @Suite de JUnit Platform por feature)
-└── stepdefinitions/               AuthDefinition (incluye @Before y pasos comunes), BookingDefinition, PingDefinition
+├── runners/CucumberTestSuite.java   Suite única; se filtra por tags
+├── stepdefinitions/
+│   ├── ComunDefinition.java         @Before, @After (limpieza), actor y validaciones comunes
+│   ├── AuthDefinition.java          Autenticarse, guardar token, token inválido
+│   ├── BookingDefinition.java       Precondiciones, consultas, CRUD y validaciones de booking
+│   └── PingDefinition.java          Health check
+└── unitarias/                       EsquemasJsonTest, AutenticacionTest, UtilidadesTest
 
 src/test/resources/
-├── features/                      auth.feature, booking.feature, ping.feature
-└── *.json                         token, getBookingIds, getBookingID, postBooking, deleteBooking
+├── features/                        auth.feature, booking.feature, ping.feature
+├── *.json                           token, authError, getBookingIds, booking, postBooking (JSON Schema)
+└── junit-platform.properties        Glue, plugins, tags por defecto y paralelismo de Cucumber
+
+.github/workflows/ci.yml             Pipeline de CI
 ```
 
 ## 5. Cómo fluye una prueba
 
-Ejemplo: *"Verificar si la actualizacion de bookings es valida"*.
+Ejemplo: *"Actualizar una reserva completa"*.
 
-1. **`@Before`** (`AuthDefinition.setTheStage`): crea el escenario (`OnlineCast`) y lee `restapi.baseurl` de `serenity.properties` (por defecto `https://restful-booker.herokuapp.com/`).
-2. **`Dado que Abel quiere logueaser en la Api`**: crea el actor `Abel` con la habilidad `CallAnApi.at(baseUrl)`.
-3. **`Cuando el ingresa "admin" and "password123"`**: tarea `CrearToken` → `POST /auth`.
-4. **`Y el Guarda el token`**: tarea `GuardaToken` → `actor.remember(TOKEN, token)`.
-5. **`Cuando el llama el servicio para actualizar el bookin 1212`**: tarea `UpdateBooking` → `actor.recall(TOKEN)` y `PUT /booking/1212` con cabecera `Cookie: token=...`.
-6. **`Entonces el verifica que el codigo HTTP sea 200`**: `seeThat(CodigoRespuestaHttp.fue(), equalTo(200))`.
-7. **`Entonces el deberia recibir el token y validar el esquema "postBooking.json"`**: `matchesJsonSchemaInClasspath(...)` sobre el cuerpo.
+1. **`@Before`** (`ComunDefinition.prepararEscenario`): crea el escenario (`OnlineCast`) y lee `restapi.baseurl` (por defecto `https://restful-booker.herokuapp.com/`).
+2. **`Dado que Abel quiere usar la API`** (en `Antecedentes`): crea el actor `Abel` con la habilidad `CallAnApi.at(urlBase)`.
+3. **`Dado el tiene una reserva creada`**: `CrearBooking` → `POST /booking`; verifica `200` y guarda el `bookingid` (`BOOKING_ID`).
+4. **`Y el está autenticado`**: `CrearToken` → `POST /auth` con `admin/password123`; verifica `200` y que hay token; `GuardaToken` lo guarda (`TOKEN`).
+5. **`Cuando el actualiza la reserva creada`**: `UpdateBooking` → `PUT /booking/{id}` con la cookie `token`.
+6. **`Entonces el código de respuesta debería ser 200`**: `seeThat(CodigoRespuestaHttp.fue(), equalTo(200))`.
+7. **`Y la respuesta debería cumplir el esquema "booking.json"`**: `matchesJsonSchemaInClasspath(...)`.
+8. **`Y el campo "firstname" de la respuesta debería ser "Juan"`**: `seeThat(CampoRespuesta.en("firstname"), equalTo("Juan"))`.
+9. **`@After`** (`ComunDefinition.limpiarReservaCreada`): borra la reserva con RestAssured directo, fuera del reporte.
 
-Los pasos de validación (`verifica que el codigo HTTP`, `validar el esquema`, `tiempo menor a`) son compartidos entre features.
+Como cada escenario crea y borra sus datos, no depende del orden ni de otros escenarios, y la suite corre en paralelo (4 hilos). `SerenityRest.lastResponse()` y el `OnStage` son por hilo, así que las validaciones no se mezclan entre escenarios.
 
-## 6. Qué se valida (y qué no)
+## 6. Qué se valida
 
 | Validación | Cómo | Dónde |
 |---|---|---|
 | Código HTTP | `CodigoRespuestaHttp` + `equalTo` | Todas las features |
-| Estructura del cuerpo | `matchesJsonSchemaInClasspath` | Auth, Booking |
-| Tiempo de respuesta | `TiempoRespuestaHttp` + `lessThan` | Auth (< 1500 ms), Ping (< 500 ms) |
-| **Valores del cuerpo** | **No se valida** | — |
+| Estructura del cuerpo | `matchesJsonSchemaInClasspath`, JSON Schema draft-04 con `additionalProperties: false` | Auth, Booking |
+| Valores del cuerpo | `CampoRespuesta` (JsonPath) + `equalTo` | Auth (mensaje de error), Booking |
+| Cuerpo en texto plano | `CuerpoRespuesta` (`Forbidden`, `Not Found`, XML) | Booking |
+| Cabeceras | `CabeceraRespuesta` + `containsString` | Booking (defecto de Content-Type XML) |
+| Reserva incluida / lista vacía | `jsonPath().getList("bookingid")` + `hasItem` / `empty` | Booking |
+| Efecto de un borrado | GET posterior → `404` (borrado) o `200` (borrado rechazado) | Booking |
+| Tiempo de respuesta | `TiempoRespuestaHttp` + `lessThan` | Auth (< 1500 ms), Ping (< 500 ms, `@rendimiento`) |
 
-## 7. Configuración
+| Esquema | Respuesta que valida |
+|---|---|
+| `token.json` | `POST /auth` correcto: `{"token": "..."}` |
+| `authError.json` | `POST /auth` con credenciales inválidas: `{"reason": "Bad credentials"}` |
+| `getBookingIds.json` | `GET /booking` con o sin filtros: `[{"bookingid": n}, ...]` |
+| `booking.json` | Una reserva: `GET /booking/{id}`, `PUT` y `PATCH` |
+| `postBooking.json` | `POST /booking`: `{"bookingid": n, "booking": {...}}` |
 
-- **`serenity.properties`**: nombre del proyecto en reportes, `restapi.baseurl`, codificación. Contiene configuración de WebDriver heredada que no se usa.
-- **`build.gradle`**: `ignoreFailures = true` (el build termina en éxito aunque fallen pruebas) y `test.finalizedBy(aggregate)` (genera el reporte siempre).
-- **Credenciales**: `admin` / `password123` son las públicas de Restful Booker; `DeleteBookingBasicAuth` las tiene en Base64 en el código.
+DELETE responde texto plano (`Created`), así que su efecto se comprueba con un GET posterior.
 
-## 8. Problemas conocidos
+### Comportamiento real de la API (verificado)
 
-Estado tras actualizar a Serenity 5.4.2 / Cucumber 8.1.0: **19 pruebas (los `Ejemplos` cuentan por separado), 11 pasan, 8 fallan**, ninguna por las versiones de las herramientas. Ping puede fallar o pasar según la latencia.
+| Llamada | Respuesta |
+|---|---|
+| Credenciales inválidas en `/auth` | `200` con `{"reason": "Bad credentials"}` |
+| PUT/PATCH/DELETE sin token, con token inválido o Basic incorrecto | `403 Forbidden` |
+| GET de id inexistente o no numérico | `404 Not Found` |
+| POST con JSON malformado | `400 Bad Request` |
+| `Accept: text/plain` | `418 I'm a Teapot` |
+| DELETE correcto / repetido | `201 Created` / `405 Method Not Allowed` |
+| `GET /ping` | `201 Created` |
 
-| # | Problema | Efecto | Ubicación |
+### Defectos conocidos de la API (`@defectoConocido`)
+
+Escenarios que describen el comportamiento **correcto** y hoy fallan. Excluidos por defecto; se ejecutan con `./gradlew test -Ptags="@defectoConocido"`.
+
+| Caso | Esperado | Real |
+|---|---|---|
+| POST sin campos obligatorios | 400 | 500 |
+| POST con checkout anterior al checkin | 400 | 200 (la acepta) |
+| POST con `totalprice` no numérico | 400 | 200 (guarda `null`) |
+| POST con `Content-Type: text/plain` | 415 | 500 |
+| Respuesta XML | `Content-Type` XML | `text/html` |
+
+## 7. Configuración, tags y CI
+
+- **`serenity.properties`**: nombre del proyecto en reportes y `restapi.baseurl`. Contiene configuración de WebDriver heredada que no se usa.
+- **`junit-platform.properties`**: glue, plugins (`SerenityReporterParallel` es necesario para el reporte), filtro por defecto `not @defectoConocido and not @rendimiento` y paralelismo fijo de 4 hilos.
+- **`build.gradle`**:
+  - `test`: solo el motor de suites (Cucumber); `-Ptags` se combina con las exclusiones por defecto; borra el reporte anterior (`clearReports`) y lo regenera siempre (`aggregate`).
+  - `unitTest`: solo JUnit Jupiter, sin red.
+  - `validarFeatures`: dry-run de Cucumber sobre los 38 escenarios; falla si algún paso no está implementado.
+  - `check` depende de las tres.
+- **Tags**: `@auth`/`@booking`/`@ping` (módulo), `@smoke`, `@negativo`, `@defectoConocido`, `@rendimiento`.
+- **CI** (`.github/workflows/ci.yml`): push a `main`, pull requests, diario a las 06:00 UTC y manual (con tags opcionales). Job `verificacion` (unitarias, `validarFeatures`, Javadoc) y, si pasa, job `api`. Publica el reporte de Serenity y los resultados JUnit como artefactos.
+- **Credenciales**: `admin` / `password123` son las públicas de Restful Booker; el Basic se genera en tiempo de ejecución (`Autenticacion.basic`).
+
+## 8. Estado y pendientes
+
+| Suite | Pruebas | Resultado |
+|---|---|---|
+| API (por defecto) | 32 | ✅ estables en ejecuciones repetidas, también con 8 hilos |
+| `@defectoConocido` | 5 | ❌ a propósito |
+| `@rendimiento` | 1 | ⚠️ depende de la latencia (p. ej. 532 ms con umbral de 500) |
+| Unitarias | 31 | ✅ |
+| `validarFeatures` | 38 escenarios | ✅ |
+
+Se verificó que las validaciones fallan cuando deben (esquema o valor incorrecto, esquema relajado, paso sin implementar → `BUILD FAILED`).
+
+| # | Pendiente | Efecto | Ubicación |
 |---|---|---|---|
-| 1 | Los `.json` de recursos son **ejemplos de respuesta, no JSON Schema** | Los de tipo objeto validan cualquier cosa (sus claves no son palabras de esquema); `getBookingIds.json` (array) lanza `invalid JSON Schema` | `src/test/resources/*.json` |
-| 2 | `GuardaToken` solo tiene constructor con `String`, pero se instancia con `instrumented(GuardaToken.class)` sin argumentos | `NullPointerException`; rompe todo escenario con "Guarda el token" | `tasks/booking/GuardaToken.java` |
-| 3 | IDs fijos (11, 1212, 1214) | Fallos intermitentes: la API pública reinicia sus datos | `booking.feature` |
-| 4 | Escenarios de login inválido validan contra `token.json` | La API responde 200 con `{"reason":"Bad credentials"}`; la intención del caso no se comprueba | `auth.feature` |
-| 5 | Línea en blanco dentro de la tabla `Ejemplos` | Puede romper el parseo de Cucumber | `auth.feature` |
-| 6 | Umbral de Ping de 500 ms | Falla según la latencia de red (p. ej. 569 ms) | `ping.feature` |
-| 7 | Dos escenarios DELETE con el mismo título | Reportes confusos | `booking.feature` |
-| 8 | Bodies JSON construidos como `String` concatenado | Los modelos `Booking`/`BookingDates` existen pero no se usan | `tasks/` |
-| 9 | Descripciones `@Step` copiadas (p. ej. "Obtener libro por Nombre" en filtro por fechas) | Reportes Serenity engañosos | `tasks/` |
-| 10 | Los `Ejemplos` de login inválido pasan siempre | Consecuencia del punto 1: `token.json` no valida nada | `auth.feature` |
+| 1 | Bodies JSON construidos como `String` concatenado | Los modelos `Booking`/`BookingDates` existen pero no se usan | `tasks/` |
+| 2 | Cabeceras repetidas en cada tarea (`Content-Type`, `relaxedHTTPSValidation`) | Duplicación; convendría una `RequestSpecification` base | `tasks/` |
+| 3 | Algunas descripciones `@Step` copiadas (p. ej. "Obtener libro por Nombre" en el filtro por fechas) | Reportes Serenity engañosos | `tasks/` |
+| 4 | Credenciales en código y features | `admin`/`password123` en `.feature` y en `DeleteBookingBasicAuth`/`ComunDefinition` | `tasks/`, `stepdefinitions/`, `features/` |
+| 5 | `prettyPrint()` en tareas y clases sin uso de la plantilla | Ruido en consola; código muerto (`User`, `Location`, builders, `ExceptionErrors`) | `tasks/`, `models/`, `exception/` |
+| 6 | Sin análisis Sonar en CI | Requiere un servidor y `SONAR_TOKEN` | `.github/workflows/ci.yml` |
 
 ## 9. Próximos pasos sugeridos
 
-1. Arreglar `GuardaToken` (constructor sin argumentos).
-2. Reemplazar los `.json` por JSON Schema reales (`type`, `properties`, `required`).
-3. Crear el booking dentro del escenario y reutilizar su `bookingid` en GET/PUT/PATCH/DELETE.
-4. Añadir Questions que validen valores del cuerpo (`jsonPath`).
-5. Retirar `--add-opens` y `net.bytebuddy.safe=false` cuando Serenity deje de inyectar clases por reflexión.
-6. Quitar `ignoreFailures = true` para que CI detecte fallos; eliminar `pom.xml` y configuración WebDriver sobrante.
+1. Construir los bodies con los modelos y una `RequestSpecification` base (cabeceras comunes una sola vez).
+2. Corregir las descripciones `@Step` restantes y quitar `prettyPrint()`.
+3. Credenciales a `serenity.conf`/variables de entorno (secretos en CI).
+4. Eliminar las clases de la plantilla sin uso y la configuración WebDriver de `serenity.properties`.
+5. Añadir Sonar al CI cuando haya servidor disponible.
+6. Retirar `--add-opens` y `net.bytebuddy.safe=false` cuando Serenity deje de inyectar clases por reflexión.

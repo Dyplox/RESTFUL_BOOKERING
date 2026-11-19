@@ -6,6 +6,7 @@ import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Put;
 import net.serenitybdd.annotations.Step;
 
+import static co.booker.utils.Autenticacion.conToken;
 import static co.booker.utils.Constantes.TOKEN;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
@@ -13,7 +14,7 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
 /**
  * Tarea que reemplaza por completo una reserva ({@code PUT /booking/{id}}).
  *
- * <p>Se autentica con la cabecera {@code Cookie: token=...}, usando el token guardado por
+ * <p>Se autentica con la cookie {@code token} (solo si el actor tiene token), usando el token guardado por
  * {@link co.booker.tasks.booking.GuardaToken}. El body es fijo (Juan Gutierrez Arias,
  * 2023-03-02 a 2023-03-09). Nota: la descripción de su {@code @Step} ("create the token") está
  * copiada y no corresponde a esta tarea.</p>
@@ -55,9 +56,8 @@ public class UpdateBooking implements Task {
 
         actor.attemptsTo(
                 Put.to(BOOKING.toString() + id)
-                        .with(requestSpecification -> requestSpecification
+                        .with(requestSpecification -> conToken(requestSpecification, token)
                                 .header("Content-Type", "application/json")
-                                .header("Cookie", "token=" + token)
                                 .body(body)
                                 .relaxedHTTPSValidation()
                         )

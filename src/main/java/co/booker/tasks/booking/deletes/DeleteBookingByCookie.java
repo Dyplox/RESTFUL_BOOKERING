@@ -5,6 +5,7 @@ import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Delete;
 import net.serenitybdd.annotations.Step;
 
+import static co.booker.utils.Autenticacion.conToken;
 import static co.booker.utils.Constantes.TOKEN;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
@@ -12,7 +13,7 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
 /**
  * Tarea que elimina una reserva autenticándose por cookie ({@code DELETE /booking/{id}}).
  *
- * <p>Envía {@code Cookie: token=...} con el token guardado por
+ * <p>Envía la cookie {@code token} (solo si el actor tiene token) con el token guardado por
  * {@link co.booker.tasks.booking.GuardaToken}. La API responde {@code 201} si la elimina.
  * Nota: la descripción de su {@code @Step} ("Obtener libro por Id") está copiada.</p>
  */
@@ -41,9 +42,8 @@ public class DeleteBookingByCookie implements Task {
         String token = actor.recall(TOKEN);
         actor.attemptsTo(
                 Delete.from(BOOKING + id)
-                        .with(requestSpecification -> requestSpecification
+                        .with(requestSpecification -> conToken(requestSpecification, token)
                                 .header("Content-Type", "application/json")
-                                .header("Cookie", "token=" + token)
                                 .relaxedHTTPSValidation()
                         )
         );
