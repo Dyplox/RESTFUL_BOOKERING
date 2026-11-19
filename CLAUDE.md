@@ -19,7 +19,8 @@ docker compose up -d                            # local API (image pinned by dig
 ./gradlew validarFeatures                       # Cucumber dry-run: fails if any step is undefined (no network)
 ./gradlew check                                 # unitTest + validarFeatures + test
 ./gradlew javadoc                               # must stay warning-free
-./gradlew sonar                                 # static analysis
+./gradlew unitTest test jacocoTestReport -Penv=docker   # combined coverage (unit + API)
+./gradlew sonar                                 # SonarQube Cloud (needs SONAR_TOKEN; projectKey Dyplox_RESTFUL_BOOKERING, org dyplox)
 ```
 
 - `-Penv` selects the `environments` block of `src/test/resources/serenity.conf` (`default`/`publico` = public Heroku API, `docker` = `localhost:3001`). The container behaves identically to the public API (verified on every case the suite covers).
@@ -32,6 +33,13 @@ docker compose up -d                            # local API (image pinned by dig
 Java 27 toolchain, Serenity 5.4.2, Cucumber 8.1.0, RestAssured 6.3.0, JUnit 6.1.3. All versions live in the version catalog `gradle/libs.versions.toml` (referenced as `libs.*` in `build.gradle`); keep Serenity libraries and plugin on the same `serenity` version. Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for Gradle, GitHub Actions (pinned by SHA with a `# vX.Y.Z` comment, keep that format) and the Docker image digest in `docker-compose.yml`. Serenity 4+ moved packages: `@Step` is `net.serenitybdd.annotations.Step`, `EnvironmentVariables` is `net.thucydides.model.util.EnvironmentVariables`.
 
 Serenity REST injects generated classes via ByteBuddy reflection, which Java 26+ blocks. All `Test` tasks set `--add-opens java.base/java.lang=ALL-UNNAMED` **and** `net.bytebuddy.safe=false`. Without them every API test fails with `Could not initialize class RestSpecificationFactory`. ByteBuddy's error message says to set `net.bytebuddy.safe` to `true`; that is wrong on Java 26+ (default is already `true`), `false` is what works.
+
+## Coverage, Sonar and releases
+
+- `jacocoTestReport` reads `build/jacoco/unitTest.exec` and `test.exec` from tests already run (`mustRunAfter`, never `dependsOn`, so asking for the report doesn't trigger the API suite). Gradle 9 rejects reading another task's output without declaring the ordering.
+- CI runs `unitTest jacocoTestReport sonar -Dsonar.qualitygate.wait=true` in the `api` job (after the API tests, full git history) only if the `SONAR_TOKEN` secret exists. SonarCloud must use CI-based analysis (Automatic Analysis off).
+- Releases: bump `version` in `gradle.properties`, move `[Sin publicar]` notes in `CHANGELOG.md` to `## [x.y.z] - date`, merge, then push tag `vx.y.z`; `.github/workflows/release.yml` checks tag = version, extracts the notes and publishes the release with the Javadoc zip (it runs only offline checks, not the API suite).
+- If Gradle fails with "Failed to exec spawn helper", the JDK was updated under a running daemon: `./gradlew --stop`.
 
 ## Configuration gotchas
 

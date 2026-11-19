@@ -1,0 +1,67 @@
+name: release
+
+# Publica una GitHub Release al empujar un tag v<versión>:
+#   1. En un PR, subir la versión en gradle.properties y mover las notas de [Sin publicar] de CHANGELOG.md
+#      a una sección "## [<versión>] - <fecha>".
+#   2. Tras el merge: git tag v<versión> origin/main && git push origin v<versión>
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Crea la release
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '27'
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Comprobar que el tag coincide con la versión y el changelog
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(sed -n 's/^version=//p' gradle.properties)"
+          if [[ "$TAG" != "v$version" ]]; then
+            echo "::error::El tag $TAG no coincide con version=$version de gradle.properties"
+            exit 1
+          fi
+          # Notas de la release: la sección de esta versión en CHANGELOG.md, sin su título
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+            found { print }
+          ' CHANGELOG.md > notas-release.md
+          if [[ ! -s notas-release.md ]]; then
+            echo "::error::CHANGELOG.md no tiene una sección '## [$version]'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Solo se publica si el código del tag compila y pasa las verificaciones sin red
+      - name: Verificar
+        run: ./gradlew unitTest validarFeatures javadoc
+
+      - name: Empaquetar el Javadoc
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: (cd build/docs/javadoc && zip -qr "$GITHUB_WORKSPACE/javadoc-$VERSION.zip" .)
+
+      - name: Crear la GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh release create "$TAG" "javadoc-$VERSION.zip" --title "$TAG" --notes-file notas-release.md --verify-tag

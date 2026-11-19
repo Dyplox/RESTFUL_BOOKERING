@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'eclipse'
     id 'idea'
+    id 'jacoco'
     alias(libs.plugins.serenity)
     alias(libs.plugins.sonarqube)
 }
@@ -114,6 +115,40 @@ tasks.register('validarFeatures', Test) {
     systemProperty 'cucumber.plugin', 'summary'
     systemProperty 'cucumber.filter.tags', 'not @ninguno'
     systemProperty 'cucumber.execution.parallel.enabled', 'false'
+}
+
+// ---------------------------------------------------------------------------------------------
+// Cobertura (JaCoCo): combina las pruebas unitarias y las de API, que son las que ejecutan las
+// Tasks y Questions. Informe: build/reports/jacoco/test/html/index.html
+// Ejecutar después de las pruebas: ./gradlew unitTest test jacocoTestReport
+// ---------------------------------------------------------------------------------------------
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
+}
+
+tasks.named('jacocoTestReport', JacocoReport) {
+    // Usa los resultados de las pruebas que se hayan ejecutado; no las lanza por su cuenta,
+    // pero si se piden en la misma ejecución, el informe va después (Gradle 9 exige declararlo)
+    mustRunAfter 'unitTest', 'test'
+    executionData.setFrom(fileTree(layout.buildDirectory.dir('jacoco')).include('unitTest.exec', 'test.exec'))
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// SonarQube Cloud: ./gradlew sonar (necesita la variable de entorno SONAR_TOKEN; el CI lo ejecuta
+// en cada push y PR si existe el secreto). projectKey y organization deben coincidir con sonarcloud.io.
+// ---------------------------------------------------------------------------------------------
+sonar {
+    properties {
+        property 'sonar.projectKey', 'Dyplox_RESTFUL_BOOKERING'
+        property 'sonar.organization', 'dyplox'
+        property 'sonar.projectName', 'RESTFUL_BOOKERING'
+        property 'sonar.coverage.jacoco.xmlReportPaths',
+                layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml').get().asFile.absolutePath
+    }
 }
 
 tasks.named('check') {
