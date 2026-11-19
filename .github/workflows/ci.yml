@@ -128,7 +128,8 @@ jobs:
   # Diario: los @defectoConocido deben seguir fallando. Si alguno pasa, la API lo corrigió y hay que
   # reclasificar el escenario; este job falla para avisar. También rendimiento, solo informativo.
   vigilancia:
-    name: Defectos conocidos y rendimiento (${{ github.event_name == 'schedule' && 'publico' || inputs.entorno || 'docker' }})
+    # Nombre fijo: si el job se omite (push y PR), GitHub no evalúa expresiones en el nombre
+    name: Defectos conocidos y rendimiento
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: verificacion
     runs-on: ubuntu-latest
