@@ -1,57 +1,121 @@
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'idea'
+    alias(libs.plugins.serenity)
+    alias(libs.plugins.sonarqube)
 }
 
 repositories {
-    jcenter()
     mavenLocal()
     mavenCentral()
 }
 
-buildscript {
-    repositories {
-        mavenLocal()
-        jcenter()
-    }
-    dependencies {
-        classpath("net.serenity-bdd:serenity-gradle-plugin:2.0.81")
-        classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.3"
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(27)
     }
 }
 
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply plugin: 'net.serenity-bdd.aggregator'
-apply plugin: "org.sonarqube"
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
+// Versiones en gradle/libs.versions.toml
 dependencies {
+    implementation libs.serenity.core
+    implementation libs.serenity.screenplay.rest
+    implementation libs.serenity.ensure
+    implementation libs.cucumber.java
+    implementation libs.gson
 
-    testImplementation 'net.serenity-bdd:serenity-cucumber:3.3.9-RC3'
-    testImplementation 'io.cucumber:cucumber-junit:4.2.0'
-    //testImplementation 'io.cucumber:cucumber-picocontainer:7.11.1'
-    //testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.hamcrest:hamcrest:2.2'
-    testImplementation 'io.rest-assured:rest-assured:5.3.0'
-    testImplementation 'io.rest-assured:json-schema-validator:5.3.0'
+    testImplementation libs.serenity.cucumber
+    testImplementation libs.rest.assured
+    implementation libs.rest.assured.json.schema.validator
+    testImplementation libs.hamcrest
 
-    implementation 'net.serenity-bdd:serenity-screenplay-rest:3.3.9-RC3'
-    implementation 'net.serenity-bdd:serenity-core:3.3.9-RC3'
-    implementation 'io.cucumber:cucumber-java:4.2.0'
-    implementation 'io.cucumber:cucumber-core:2.0.0'
-    implementation('com.google.code.gson:gson:2.8.9')
-
-    implementation("org.junit.platform:junit-platform-launcher:1.5.2")
-    implementation("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-    //implementation("org.junit.vintage:junit-vintage-engine:5.5.2")
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.platform.suite
+    testImplementation libs.junit.jupiter
+    testImplementation libs.cucumber.junit.platform.engine
+    testRuntimeOnly libs.junit.platform.launcher
 }
 
-tasks.withType(Test) {
-    useJUnit()
-    ignoreFailures = true
-    gradle.startParameter.continueOnFailure = true
-    test.finalizedBy(aggregate)
+// Getters, setters y constantes triviales no llevan Javadoc: se omite solo el grupo 'missing' de doclint
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+
+tasks.withType(Test).configureEach {
+    // Serenity REST (RestSpecificationFactory) inyecta clases con ByteBuddy mediante reflexión sobre
+    // ClassLoader.defineClass; en Java 26+ hay que abrir java.lang y habilitar la vía Unsafe explícitamente.
+    // Ojo: en Java 26+ net.bytebuddy.safe vale true por defecto y es 'false' lo que reactiva Unsafe
+    // (el mensaje de error de ByteBuddy dice lo contrario).
+    jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+    systemProperty 'net.bytebuddy.safe', 'false'
+}
+
+// Pruebas de API (Cucumber + Serenity) contra la API real. Filtrar con: ./gradlew test -Ptags="@smoke"
+// Sin -Ptags se usa el filtro de junit-platform.properties (todo menos @defectoConocido y @rendimiento).
+// Con -Ptags, esos dos tags se siguen excluyendo salvo que la expresión los mencione explícitamente.
+// Si una prueba falla, el build falla; el reporte de Serenity se genera igual (finalizedBy).
+tasks.named('test', Test) {
+    description = 'Ejecuta las pruebas de API (Cucumber) contra Restful Booker.'
+    useJUnitPlatform {
+        includeEngines 'junit-platform-suite'
+    }
+    // Entorno de serenity.conf: ./gradlew test -Penv=docker (por defecto, la API pública)
+    if (project.hasProperty('env')) {
+        systemProperty 'environment', project.property('env')
+    }
+    if (project.hasProperty('tags')) {
+        String tags = project.property('tags').toString()
+        ['@defectoConocido', '@rendimiento'].each { excluido ->
+            if (!tags.contains(excluido)) {
+                tags = "(${tags}) and not ${excluido}"
+            }
+        }
+        systemProperty 'cucumber.filter.tags', tags
+    }
+    // Cada ejecución consulta una API externa: nunca se considera "al día"
+    outputs.upToDateWhen { false }
+    // Borra los resultados de Serenity de ejecuciones anteriores para que el reporte no las mezcle
+    dependsOn 'clearReports'
+    finalizedBy(aggregate)
+}
+
+// El reporte se regenera siempre después de 'test' (Gradle lo daba por "al día" y dejaba uno viejo)
+tasks.named('aggregate') {
+    outputs.upToDateWhen { false }
+}
+
+// Pruebas unitarias (JUnit Jupiter): no usan red, son rápidas
+tasks.register('unitTest', Test) {
+    description = 'Ejecuta las pruebas unitarias (sin red).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter'
+    }
+}
+
+// Valida sin red que cada paso de las features tiene su step definition (dry-run de Cucumber)
+tasks.register('validarFeatures', Test) {
+    description = 'Comprueba en dry-run que todos los pasos de las features están implementados.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeEngines 'junit-platform-suite'
+    }
+    systemProperty 'cucumber.execution.dry-run', 'true'
+    systemProperty 'cucumber.plugin', 'summary'
+    systemProperty 'cucumber.filter.tags', 'not @ninguno'
+    systemProperty 'cucumber.execution.parallel.enabled', 'false'
+}
+
+tasks.named('check') {
+    dependsOn 'unitTest', 'validarFeatures'
 }

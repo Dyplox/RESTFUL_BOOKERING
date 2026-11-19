@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Respuesta de POST /auth con credenciales inválidas",
+  "type": "object",
+  "required": ["reason"],
+  "properties": {
+    "reason": { "type": "string", "enum": ["Bad credentials"] }
+  },
+  "additionalProperties": false
+}

@@ -1,81 +1,35 @@
 package co.booker.models;
 
-public class Booking {
-    private String firstname;
-    private String lastname;
-    private Number totalprice;
-    private Boolean depositpaid;
-    private BookingDates bookingDates;
-    private String additionalneeds;
+/**
+ * Reserva de Restful Booker, con los mismos nombres de campo que el JSON de la API.
+ *
+ * <p>Se serializa con {@link co.booker.utils.Json}. Los campos {@code null} se omiten, así que una
+ * reserva con solo algunos campos sirve como body de un {@code PATCH}.</p>
+ *
+ * @param firstname       nombre del huésped
+ * @param lastname        apellido del huésped
+ * @param totalprice      precio total
+ * @param depositpaid     si se pagó el depósito
+ * @param bookingdates    fechas de entrada y salida
+ * @param additionalneeds necesidades adicionales (opcional)
+ */
+public record Booking(String firstname, String lastname, Integer totalprice, Boolean depositpaid,
+                      BookingDates bookingdates, String additionalneeds) {
 
-
-    public Booking(String firstname, String lastname, Number totalprice, Boolean depositpaid,
-                   BookingDates bookingDates, String additionalneeds) {
-        this.firstname = firstname;
-        this.lastname = lastname;
-        this.totalprice = totalprice;
-        this.depositpaid = depositpaid;
-        this.bookingDates = bookingDates;
-        this.additionalneeds = additionalneeds;
-    }
-
-    public String getFirstname() {
-        return firstname;
-    }
-
-    public void setFirstname(String firstname) {
-        this.firstname = firstname;
-    }
-
-    public String getLastname() {
-        return lastname;
-    }
-
-    public void setLastname(String lastname) {
-        this.lastname = lastname;
-    }
-
-    public Number getTotalprice() {
-        return totalprice;
-    }
-
-    public void setTotalprice(Number totalprice) {
-        this.totalprice = totalprice;
-    }
-
-    public Boolean getDepositpaid() {
-        return depositpaid;
-    }
-
-    public void setDepositpaid(Boolean depositpaid) {
-        this.depositpaid = depositpaid;
-    }
-
-    public BookingDates getBookingDates() {
-        return bookingDates;
-    }
-
-    public void setBookingDates(BookingDates bookingDates) {
-        this.bookingDates = bookingDates;
-    }
-
-    public String getAdditionalneeds() {
-        return additionalneeds;
-    }
-
-    public void setAdditionalneeds(String additionalneeds) {
-        this.additionalneeds = additionalneeds;
-    }
-
-    @Override
-    public String toString() {
-        return "Book{" +
-                "firstname='" + firstname + '\'' +
-                ", lastname='" + lastname + '\'' +
-                ", totalprice=" + totalprice +
-                ", depositpaid=" + depositpaid +
-                ", bookingDates=" + bookingDates +
-                ", additionalneeds='" + additionalneeds + '\'' +
-                '}';
+    /**
+     * Devuelve una copia de esta reserva con los campos no nulos de {@code cambios} aplicados,
+     * igual que hace la API con un {@code PATCH}.
+     *
+     * @param cambios reserva parcial
+     * @return reserva resultante
+     */
+    public Booking con(Booking cambios) {
+        return new Booking(
+                cambios.firstname() != null ? cambios.firstname() : firstname,
+                cambios.lastname() != null ? cambios.lastname() : lastname,
+                cambios.totalprice() != null ? cambios.totalprice() : totalprice,
+                cambios.depositpaid() != null ? cambios.depositpaid() : depositpaid,
+                cambios.bookingdates() != null ? cambios.bookingdates() : bookingdates,
+                cambios.additionalneeds() != null ? cambios.additionalneeds() : additionalneeds);
     }
 }

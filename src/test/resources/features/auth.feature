@@ -2,36 +2,37 @@
 # author: @AbelGuAr
 # encoding: utf-8
 
-Característica: Realizar las pruebas automatizadas al modulo auth del servicios a RESTFUL - BOOKER
+@auth
+Característica: Autenticación en Restful Booker
+  Como consumidor de la API
+  Quiero obtener un token con mis credenciales
+  Para poder modificar y eliminar reservas
 
-  #P Verify if a user will be able to login with a valid username and valid password.                     OK
-  Escenario: Verificar si un usuario podra iniciar sesion con un username y una password validos
-    Dado que Abel quiere logueaser en la Api
-    Cuando el ingresa "admin" and "password"
-    Y el Guarda el token
-    Entonces el verifica que el codigo HTTP sea 200
-    Entonces el deberia recibir el token y validar el esquema "token.json"
-    # Verify the time taken to log in with a valid username and password.
-    Entonces el deberia ver un tiempo menor a 1500
+  Antecedentes:
+    Dado que Abel quiere usar la API
 
+  @smoke
+  Escenario: Iniciar sesión con usuario y contraseña válidos
+    Cuando el se autentica con las credenciales configuradas
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería cumplir el esquema "token.json"
+    Y el tiempo de respuesta debería ser menor a 1500 ms
 
-  #N Verify if a user cannot login with a valid username and an invalid password.                         OK
-  #N Verify if a user cannot login with an invalid username and a valid password.                         OK
-  #N Verify that the validation message gets displayed in case the user leaves the username field blank.  OK
-  #N Verify that the validation message gets displayed in case the user leaves the password field blank.  OK
-  Esquema del escenario: Verificar si un usuario podra iniciar sesion con un username y una password invalidos
-    Dado que Abel quiere logueaser en la Api
-    Cuando el ingresa "<username>" and "<password>"
-    Entonces el verifica que el codigo HTTP sea 200
-    Entonces el deberia recibir el token y validar el esquema "token.json"
+  # La API responde 200 también con credenciales inválidas, pero con {"reason": "Bad credentials"} en vez de token
+  @negativo
+  Esquema del escenario: No se puede iniciar sesión con credenciales inválidas (<caso>)
+    Cuando el se autentica con usuario "<usuario>" y contraseña "<contraseña>"
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería cumplir el esquema "authError.json"
+    Y el campo "reason" de la respuesta debería ser "Bad credentials"
+
     Ejemplos:
-      | username | password    |
-      | admin    | BadPassword |
-      | BadAdmin | password123 |
-      |          | password123 |
-      | admin    |             |
-
-      | admin    | password    |
-      | 1995     | password    |
-      | admin    | 12345667    |
-      | $&*@#    | $&*@#_()    |
+      | caso                            | usuario  | contraseña  |
+      | contraseña incorrecta           | admin    | BadPassword |
+      | usuario incorrecto              | BadAdmin | password123 |
+      | usuario vacío                   |          | password123 |
+      | contraseña vacía                | admin    |             |
+      | ambos vacíos                    |          |             |
+      | contraseña parecida a la válida | admin    | password    |
+      | usuario numérico                | 1995     | password    |
+      | caracteres especiales           | $&*@#    | $&*@#_()    |

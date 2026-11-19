@@ -1,14 +1,13 @@
-[
-  {
-    "bookingid": 1
-  },
-  {
-    "bookingid": 2
-  },
-  {
-    "bookingid": 3
-  },
-  {
-    "bookingid": 4
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Respuesta de GET /booking (lista de ids, con o sin filtros)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["bookingid"],
+    "properties": {
+      "bookingid": { "type": "integer", "minimum": 1 }
+    },
+    "additionalProperties": false
   }
-]
+}

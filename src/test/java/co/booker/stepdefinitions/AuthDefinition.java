@@ -1,66 +1,61 @@
 package co.booker.stepdefinitions;
 
+import co.booker.questions.CampoRespuesta;
 import co.booker.questions.CodigoRespuestaHttp;
 import co.booker.tasks.CrearToken;
 import co.booker.tasks.booking.GuardaToken;
-import io.cucumber.java.Before;
+import co.booker.utils.Configuracion;
 import io.cucumber.java.es.Cuando;
 import io.cucumber.java.es.Dado;
-import io.cucumber.java.es.Entonces;
-import io.restassured.response.Response;
-import io.restassured.response.ResponseOptions;
-import net.serenitybdd.rest.SerenityRest;
-import net.serenitybdd.screenplay.actors.OnStage;
-import net.serenitybdd.screenplay.actors.OnlineCast;
-import net.serenitybdd.screenplay.rest.abilities.CallAnApi;
-import net.thucydides.core.util.EnvironmentVariables;
+import net.serenitybdd.screenplay.Actor;
+import net.serenitybdd.screenplay.ensure.Ensure;
 
-import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
-import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
-import static net.serenitybdd.screenplay.actors.OnStage.theActorCalled;
+import static co.booker.utils.Constantes.TOKEN;
 import static net.serenitybdd.screenplay.actors.OnStage.theActorInTheSpotlight;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 
+/** Step definitions de autenticación: pedir y guardar el token, o preparar un token inválido. */
 public class AuthDefinition {
 
-    public static ResponseOptions<Response> response;
-    private String theRestApiBaseUrl;
-    private EnvironmentVariables environmentVariables;
-
-    @Before
-    public void setTheStage() {
-        OnStage.setTheStage(new OnlineCast());
-        theRestApiBaseUrl = environmentVariables.optionalProperty("restapi.baseurl")
-                .orElse("https://restful-booker.herokuapp.com/");
+    /**
+     * Solicita un token con las credenciales dadas.
+     *
+     * @param usuario nombre de usuario (puede ir vacío)
+     * @param clave   contraseña (puede ir vacía)
+     */
+    @Cuando("el se autentica con usuario {string} y contraseña {string}")
+    public void elSeAutenticaConUsuarioYContrasena(String usuario, String clave) {
+        theActorInTheSpotlight().attemptsTo(CrearToken.usuario(usuario, clave));
     }
 
-    @Dado("que Abel quiere logueaser en la Api")
-    public void queAbelquiereLogueaserEnLaApi() {
-        theActorCalled("Abel").whoCan(CallAnApi.at(theRestApiBaseUrl));
+    /** Solicita un token con las credenciales del entorno activo ({@code serenity.conf}). */
+    @Cuando("el se autentica con las credenciales configuradas")
+    public void elSeAutenticaConLasCredencialesConfiguradas() {
+        theActorInTheSpotlight().attemptsTo(CrearToken.usuario(Configuracion.usuario(), Configuracion.clave()));
     }
 
-    @Cuando("el ingresa {string} and {string}")
-    public void elIngresaAnd(String userName, String password) {
-        theActorInTheSpotlight().attemptsTo(CrearToken.usuario(userName, password));
-    }
-
-    @Cuando("el Guarda el token")
+    /** Guarda el token de la última respuesta en la memoria del actor. */
+    @Cuando("el guarda el token")
     public void elGuardaElToken() {
         theActorInTheSpotlight().attemptsTo(GuardaToken.ingreso());
     }
 
-    @Entonces("el verifica que el codigo HTTP sea {int}")
-    public void elVerificaQueElCodigoHTTPSea(Integer statusHttps) {
-        theActorInTheSpotlight().should(
-                seeThat("el codigo de respuesta", CodigoRespuestaHttp.fue(), equalTo(statusHttps))
-                //.orComplainWith(SerenityRest.lastResponse().getBody().jsonPath().get("reason"))
-        );
+    /**
+     * Precondición: se autentica con las credenciales del entorno activo, verifica que recibió un
+     * token y lo guarda en el actor.
+     */
+    @Dado("el está autenticado")
+    public void elEstaAutenticado() {
+        Actor actor = theActorInTheSpotlight();
+        actor.attemptsTo(CrearToken.usuario(Configuracion.usuario(), Configuracion.clave()));
+        actor.attemptsTo(
+                Ensure.that("el código al autenticarse", CodigoRespuestaHttp.fue()).isEqualTo(200),
+                Ensure.that("el token recibido", CampoRespuesta.en("token")).isNotBlank());
+        actor.attemptsTo(GuardaToken.ingreso());
     }
 
-    @Entonces("el deberia recibir el token y validar el esquema {string}")
-    public void elDeberiaRecibirElTokenYValidarElEsquema(String jsonName) {
-        String responseBody = SerenityRest.lastResponse().getBody().asString();
-        assertThat(responseBody, matchesJsonSchemaInClasspath(jsonName));
+    /** Precondición: el actor tiene guardado un token que la API no reconoce. */
+    @Dado("el tiene un token inválido")
+    public void elTieneUnTokenInvalido() {
+        theActorInTheSpotlight().remember(TOKEN, "token-invalido");
     }
 }
