@@ -2,6 +2,9 @@ package co.booker.stepdefinitions;
 
 import co.booker.models.Booking;
 import co.booker.questions.CodigoRespuestaHttp;
+import co.booker.questions.CuerpoRespuesta;
+import co.booker.questions.IdsDeReservas;
+import co.booker.questions.ReservaRespuesta;
 import co.booker.tasks.booking.CrearBooking;
 import co.booker.tasks.booking.EnviarBooking;
 import co.booker.tasks.booking.deletes.DeleteBookingBasicAuth;
@@ -16,21 +19,14 @@ import co.booker.tasks.booking.updates.UpdateBooking;
 import io.cucumber.java.es.Cuando;
 import io.cucumber.java.es.Dado;
 import io.cucumber.java.es.Entonces;
-import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
+import net.serenitybdd.screenplay.ensure.Ensure;
 
 import static co.booker.utils.Constantes.BOOKING_ID;
 import static co.booker.utils.Constantes.RESERVA_CREADA;
 import static co.booker.utils.Constantes.RESERVA_ENVIADA;
-import static co.booker.utils.Json.desde;
-import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
+import static co.booker.utils.Json.aJson;
 import static net.serenitybdd.screenplay.actors.OnStage.theActorInTheSpotlight;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
 
 /**
  * Step definitions del módulo booking: consultas, creación, actualización y borrado de reservas.
@@ -51,7 +47,7 @@ public class BookingDefinition {
     public void elTieneUnaReservaCreada() {
         Actor actor = theActorInTheSpotlight();
         actor.attemptsTo(CrearBooking.valida());
-        actor.should(seeThat("el código al crear la reserva", CodigoRespuestaHttp.fue(), equalTo(200)));
+        actor.attemptsTo(Ensure.that("el código al crear la reserva", CodigoRespuestaHttp.fue()).isEqualTo(200));
     }
 
     // GET
@@ -238,39 +234,37 @@ public class BookingDefinition {
     /** Verifica que la lista de reservas de la última respuesta incluye la reserva creada. */
     @Entonces("la lista debería contener la reserva creada")
     public void laListaDeberiaContenerLaReservaCreada() {
-        assertThat("ids de la lista de reservas", idsDeLaLista(), hasItem(idReservaCreada()));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(IdsDeReservas.enLaRespuesta()).contains(idReservaCreada()));
     }
 
     /** Verifica que la lista de reservas de la última respuesta contiene únicamente la reserva creada. */
     @Entonces("la lista debería contener solo la reserva creada")
     public void laListaDeberiaContenerSoloLaReservaCreada() {
-        assertThat("ids de la lista de reservas", idsDeLaLista(), contains(idReservaCreada()));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(IdsDeReservas.enLaRespuesta()).containsExactly(idReservaCreada()));
     }
 
     /** Verifica que la lista de reservas de la última respuesta no incluye la reserva creada. */
     @Entonces("la lista no debería contener la reserva creada")
     public void laListaNoDeberiaContenerLaReservaCreada() {
-        assertThat("ids de la lista de reservas", idsDeLaLista(), not(hasItem(idReservaCreada())));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(IdsDeReservas.enLaRespuesta()).doesNotContain(idReservaCreada()));
     }
 
     /** Verifica que el body de la última respuesta es exactamente la reserva creada. */
     @Entonces("la respuesta debería coincidir con la reserva creada")
     public void laRespuestaDeberiaCoincidirConLaReservaCreada() {
-        assertThat("reserva devuelta", reservaDeLaRespuesta(), equalTo(reservaCreada()));
+        ensureReserva(ReservaRespuesta.completa(), reservaCreada());
     }
 
     /** Verifica que el body de la última respuesta es exactamente la reserva enviada (PUT). */
     @Entonces("la respuesta debería coincidir con la reserva enviada")
     public void laRespuestaDeberiaCoincidirConLaReservaEnviada() {
-        assertThat("reserva devuelta", reservaDeLaRespuesta(), equalTo(reservaEnviada()));
+        ensureReserva(ReservaRespuesta.completa(), reservaEnviada());
     }
 
     /** Verifica que el campo {@code booking} de la respuesta de un POST es la reserva enviada. */
     @Entonces("la reserva de la respuesta debería coincidir con la enviada")
     public void laReservaDeLaRespuestaDeberiaCoincidirConLaEnviada() {
-        assertThat("reserva devuelta",
-                desde(SerenityRest.lastResponse().getBody().asString(), "booking", Booking.class),
-                equalTo(reservaEnviada()));
+        ensureReserva(ReservaRespuesta.enElCampo("booking"), reservaEnviada());
     }
 
     /**
@@ -279,7 +273,7 @@ public class BookingDefinition {
      */
     @Entonces("la respuesta debería tener los cambios enviados sobre la reserva creada")
     public void laRespuestaDeberiaTenerLosCambiosEnviadosSobreLaReservaCreada() {
-        assertThat("reserva devuelta", reservaDeLaRespuesta(), equalTo(reservaCreada().con(reservaEnviada())));
+        ensureReserva(ReservaRespuesta.completa(), reservaCreada().con(reservaEnviada()));
     }
 
     /** Vuelve a consultar la reserva creada y verifica que persistió con los datos enviados. */
@@ -287,35 +281,32 @@ public class BookingDefinition {
     public void alConsultarlaDeNuevoDeberiaCoincidirConLaReservaEnviada() {
         Actor actor = theActorInTheSpotlight();
         actor.attemptsTo(BookingByID.delServicio(idReservaCreada().toString()));
-        actor.should(seeThat("el código al volver a consultar", CodigoRespuestaHttp.fue(), equalTo(200)));
-        assertThat("reserva persistida", reservaDeLaRespuesta(), equalTo(reservaEnviada()));
+        actor.attemptsTo(Ensure.that("el código al volver a consultar", CodigoRespuestaHttp.fue()).isEqualTo(200));
+        ensureReserva(ReservaRespuesta.completa(), reservaEnviada());
     }
 
     /** Verifica que el cuerpo (XML) de la última respuesta contiene el apellido único de la reserva creada. */
     @Entonces("el cuerpo de la respuesta debería contener el apellido de la reserva creada en XML")
     public void elCuerpoDeberiaContenerElApellidoDeLaReservaCreadaEnXml() {
-        assertThat("cuerpo de la respuesta", SerenityRest.lastResponse().getBody().asString(),
-                org.hamcrest.Matchers.containsString("<lastname>" + reservaCreada().lastname() + "</lastname>"));
+        theActorInTheSpotlight().attemptsTo(
+                Ensure.that(CuerpoRespuesta.comoTexto()).contains("<lastname>" + reservaCreada().lastname() + "</lastname>"));
     }
 
     /** Verifica que la lista de reservas de la última respuesta está vacía. */
     @Entonces("la lista debería estar vacía")
     public void laListaDeberiaEstarVacia() {
-        assertThat("ids de la lista de reservas", idsDeLaLista(), empty());
+        theActorInTheSpotlight().attemptsTo(Ensure.that(IdsDeReservas.enLaRespuesta()).isEmpty());
     }
 
     private static void verificarCodigoAlConsultarReservaCreada(int codigo) {
         Actor actor = theActorInTheSpotlight();
         actor.attemptsTo(BookingByID.delServicio(idReservaCreada().toString()));
-        actor.should(seeThat("el código al consultar la reserva creada", CodigoRespuestaHttp.fue(), equalTo(codigo)));
+        actor.attemptsTo(Ensure.that("el código al consultar la reserva creada", CodigoRespuestaHttp.fue()).isEqualTo(codigo));
     }
 
-    private static java.util.List<Integer> idsDeLaLista() {
-        return SerenityRest.lastResponse().jsonPath().getList("bookingid", Integer.class);
-    }
-
-    private static Booking reservaDeLaRespuesta() {
-        return desde(SerenityRest.lastResponse().getBody().asString(), Booking.class);
+    /** Compara la reserva de la respuesta con la esperada como JSON canónico (el reporte muestra ambas). */
+    private static void ensureReserva(ReservaRespuesta reserva, Booking esperada) {
+        theActorInTheSpotlight().attemptsTo(Ensure.that(reserva).isEqualTo(aJson(esperada)));
     }
 
     private static Booking reservaCreada() {

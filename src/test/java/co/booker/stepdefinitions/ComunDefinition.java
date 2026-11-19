@@ -4,6 +4,7 @@ import co.booker.questions.CabeceraRespuesta;
 import co.booker.questions.CampoRespuesta;
 import co.booker.questions.CodigoRespuestaHttp;
 import co.booker.questions.CuerpoRespuesta;
+import co.booker.questions.ErroresDeEsquema;
 import co.booker.questions.TiempoRespuestaHttp;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
@@ -14,22 +15,15 @@ import co.booker.utils.Configuracion;
 import io.cucumber.java.es.Dado;
 import io.cucumber.java.es.Entonces;
 import io.restassured.RestAssured;
-import net.serenitybdd.rest.SerenityRest;
-import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.actors.OnStage;
 import net.serenitybdd.screenplay.actors.OnlineCast;
+import net.serenitybdd.screenplay.ensure.Ensure;
 import net.serenitybdd.screenplay.rest.abilities.CallAnApi;
 
 import static co.booker.utils.Constantes.BOOKING_ID;
 import static co.booker.utils.endpoints.uris.BOOKING;
-import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
-import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
 import static net.serenitybdd.screenplay.actors.OnStage.theActorCalled;
 import static net.serenitybdd.screenplay.actors.OnStage.theActorInTheSpotlight;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.lessThan;
 
 /**
  * Hooks y pasos comunes a todas las features: preparación del escenario, creación del actor,
@@ -108,7 +102,7 @@ public class ComunDefinition {
      */
     @Entonces("el código de respuesta debería ser {int}")
     public void elCodigoDeRespuestaDeberiaSer(Integer codigo) {
-        theActorInTheSpotlight().should(seeThat("el código de respuesta", CodigoRespuestaHttp.fue(), equalTo(codigo)));
+        theActorInTheSpotlight().attemptsTo(Ensure.that("el código de respuesta", CodigoRespuestaHttp.fue()).isEqualTo(codigo));
     }
 
     /**
@@ -118,7 +112,7 @@ public class ComunDefinition {
      */
     @Entonces("la respuesta debería cumplir el esquema {string}")
     public void laRespuestaDeberiaCumplirElEsquema(String esquema) {
-        assertThat(SerenityRest.lastResponse().getBody().asString(), matchesJsonSchemaInClasspath(esquema));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(ErroresDeEsquema.contra(esquema)).isEmpty());
     }
 
     /**
@@ -129,7 +123,7 @@ public class ComunDefinition {
      */
     @Entonces("el campo {string} de la respuesta debería ser {string}")
     public void elCampoDeLaRespuestaDeberiaSer(String ruta, String valor) {
-        theActorInTheSpotlight().should(seeThat(CampoRespuesta.en(ruta), equalTo(valor)));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(CampoRespuesta.en(ruta)).isEqualTo(valor));
     }
 
     /**
@@ -140,7 +134,7 @@ public class ComunDefinition {
      */
     @Entonces("la cabecera {string} de la respuesta debería contener {string}")
     public void laCabeceraDeLaRespuestaDeberiaContener(String cabecera, String texto) {
-        theActorInTheSpotlight().should(seeThat(CabeceraRespuesta.llamada(cabecera), containsString(texto)));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(CabeceraRespuesta.llamada(cabecera)).contains(texto));
     }
 
     /**
@@ -150,7 +144,7 @@ public class ComunDefinition {
      */
     @Entonces("el cuerpo de la respuesta debería ser {string}")
     public void elCuerpoDeLaRespuestaDeberiaSer(String texto) {
-        theActorInTheSpotlight().should(seeThat(CuerpoRespuesta.comoTexto(), equalTo(texto)));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(CuerpoRespuesta.comoTexto()).isEqualTo(texto));
     }
 
     /**
@@ -160,7 +154,7 @@ public class ComunDefinition {
      */
     @Entonces("el cuerpo de la respuesta debería contener {string}")
     public void elCuerpoDeLaRespuestaDeberiaContener(String texto) {
-        theActorInTheSpotlight().should(seeThat(CuerpoRespuesta.comoTexto(), containsString(texto)));
+        theActorInTheSpotlight().attemptsTo(Ensure.that(CuerpoRespuesta.comoTexto()).contains(texto));
     }
 
     /**
@@ -170,8 +164,8 @@ public class ComunDefinition {
      */
     @Entonces("el tiempo de respuesta debería ser menor a {int} ms")
     public void elTiempoDeRespuestaDeberiaSerMenorA(Integer milisegundos) {
-        Actor actor = theActorInTheSpotlight();
-        actor.should(seeThat("el tiempo de respuesta (ms)", TiempoRespuestaHttp.fue(), lessThan(milisegundos.longValue())));
+        theActorInTheSpotlight().attemptsTo(
+                Ensure.that("el tiempo de respuesta (ms)", TiempoRespuestaHttp.fue()).isLessThan(milisegundos.longValue()));
     }
 
     private static void esperar(long milisegundos) {

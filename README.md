@@ -5,7 +5,7 @@ Pruebas automatizadas de la API pública [Restful Booker](https://restful-booker
 Cubre:
 
 - **Auth**: token con credenciales válidas; 8 combinaciones de credenciales inválidas.
-- **Booking**: CRUD completo, filtros por nombre y fechas, formato XML y casos negativos (403 sin token o con token inválido, 404, 400, 405, 418). Cada escenario crea su propia reserva con datos únicos y la elimina al terminar.
+- **Booking**: CRUD completo, ciclo de vida de punta a punta, filtros por nombre y fechas, formato XML, valores límite (precio 0 y máximo, Unicode, campos opcionales y desconocidos) y casos negativos (403 sin token o con token inválido, 404, 400, 405, 418). Cada escenario crea su propia reserva con datos únicos y la elimina al terminar.
 - **Ping**: health check y tiempo de respuesta.
 - **Defectos conocidos de la API**: escenarios que documentan los errores intencionados de Restful Booker (excluidos por defecto).
 
@@ -26,7 +26,8 @@ Cada prueba valida el **código HTTP** y, según el caso, la respuesta contra un
 | Cucumber (`cucumber-java`, `cucumber-junit-platform-engine`) | 8.1.0 | Escenarios BDD en Gherkin, en español, en paralelo |
 | RestAssured | 6.3.0 | Motor HTTP bajo Serenity (`SerenityRest`) |
 | RestAssured JSON Schema Validator | 6.3.0 | Validación del body contra JSON Schema |
-| Hamcrest | 3.0 | Matchers de aserción |
+| Serenity Ensure | 5.4.2 | Aserciones que aparecen en el reporte con lo esperado y lo obtenido |
+| Hamcrest | 3.0 | Matchers (pruebas unitarias) |
 | JUnit Platform (`junit-platform-suite`) | 6.1.3 | Runner de Cucumber como `@Suite` |
 | JUnit Jupiter | 6.1.3 | Pruebas unitarias |
 | Gson | 2.15.0 | Serialización JSON |
@@ -37,7 +38,7 @@ Cada prueba valida el **código HTTP** y, según el caso, la respuesta contra un
 
 - **JDK 27**
 - Para las pruebas de API, una de estas dos:
-  - **Docker** (recomendado): `docker run -d -p 3001:3001 mwinteringham/restfulbooker`
+  - **Docker** (recomendado): `docker compose up -d` (imagen fijada por *digest* en `docker-compose.yml`)
   - Conexión a internet, para usar la API pública
 - Las pruebas unitarias no necesitan nada de esto
 
@@ -97,7 +98,12 @@ Aunque se pase `-Ptags`, `@defectoConocido` y `@rendimiento` se siguen excluyend
    - En la ejecución diaria, contra la API pública, para detectar si cambia. También corre `@rendimiento`, a título informativo.
    - En la ejecución manual se elige el entorno.
 
-El reporte de Serenity y los resultados JUnit se publican como artefactos aunque haya fallos.
+Cada ejecución deja un **resumen** (aprobadas, fallidas, excluidas y los fallos) en la página del run. El reporte de Serenity y los resultados JUnit se publican como artefactos aunque haya fallos.
+
+Además:
+- **Vigilancia diaria:** ejecuta los `@defectoConocido` y **falla si alguno empieza a pasar**, lo que indicaría que la API lo corrigió y hay que reclasificar el escenario. También corre `@rendimiento`, a título informativo.
+- **Reporte en GitHub Pages:** en cada push a `main` se publica el reporte de Serenity. Requiere activarlo una vez en *Settings → Pages → Source: GitHub Actions*.
+- **Dependencias al día:** Dependabot abre PRs semanales para Gradle (`gradle/libs.versions.toml`), las GitHub Actions (fijadas por SHA) y la imagen Docker (fijada por *digest*).
 
 ## Configuración
 
@@ -127,6 +133,13 @@ src/test/resources/
 ├── *.json                     JSON Schema de cada respuesta
 ├── serenity.conf              Entornos y credenciales
 └── junit-platform.properties  Configuración de Cucumber
+
+gradle/libs.versions.toml      Versiones de todas las dependencias
+docker-compose.yml             Restful Booker local (imagen fijada por digest)
+.github/
+├── workflows/ci.yml           Pipeline
+├── scripts/resumen_pruebas.py Resumen de resultados y vigilancia de defectos
+└── dependabot.yml             Actualizaciones automáticas
 ```
 
 ## Ejemplo de escenario
@@ -144,11 +157,11 @@ Escenario: Eliminar una reserva sin token devuelve 403 y no la borra
 
 | Suite | Pruebas | Resultado |
 |---|---|---|
-| API (por defecto) | 33 | ✅ en Docker (~3 s) y en la API pública (~9 s), en paralelo y en ejecuciones repetidas |
-| `@defectoConocido` | 5 | ❌ fallan a propósito: documentan errores de la API |
+| API (por defecto) | 39 | ✅ en Docker (~3 s) y en la API pública (~11 s), en paralelo y en ejecuciones repetidas |
+| `@defectoConocido` | 13 | ❌ fallan a propósito: documentan errores de la API |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 47 | ✅ |
-| Validación de features | 39 escenarios | ✅ todos los pasos implementados |
+| Unitarias | 48 | ✅ |
+| Validación de features | 53 escenarios | ✅ todos los pasos implementados |
 
 ## Autor
 

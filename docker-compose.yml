@@ -1,0 +1,11 @@
+# API de Restful Booker en local, para ejecutar la suite con: ./gradlew test -Penv=docker
+#   docker compose up -d    /    docker compose down
+#
+# La imagen está fijada por digest para que las pruebas no cambien si se publica una nueva "latest";
+# Dependabot propone las actualizaciones. Es solo amd64: en Mac con ARM corre emulada.
+services:
+  restfulbooker:
+    image: mwinteringham/restfulbooker:latest@sha256:a87ae093264caf64cad2557256921cbdb1fec466d6356b5e140e3f060b904f04
+    platform: linux/amd64
+    ports:
+      - "3001:3001"

@@ -185,6 +185,62 @@ Característica: Gestión de reservas en Restful Booker
     Cuando el elimina la reserva creada mediante Basic Auth
     Entonces el código de respuesta debería ser 405
 
+  # ---------- Ciclo de vida ----------
+
+  Escenario: Ciclo de vida completo de una reserva
+    Dado el está autenticado
+    Cuando el crea una reserva
+    Entonces el código de respuesta debería ser 200
+    Y la reserva de la respuesta debería coincidir con la enviada
+    Cuando el consulta la reserva creada
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería coincidir con la reserva creada
+    Cuando el actualiza la reserva creada
+    Entonces el código de respuesta debería ser 200
+    Y al consultarla de nuevo debería coincidir con la reserva enviada
+    Cuando el elimina la reserva creada mediante cookie
+    Entonces el código de respuesta debería ser 201
+    Y la reserva creada ya no debería existir
+
+  # ---------- Valores límite válidos ----------
+
+  Esquema del escenario: Crear una reserva con valores límite válidos (<caso>)
+    Cuando el envía la siguiente reserva:
+      """
+      {"firstname": "<nombre>", "lastname": "Limites", "totalprice": <precio>, "depositpaid": true,
+       "bookingdates": {"checkin": "2031-01-10", "checkout": "2031-01-12"}, "additionalneeds": "Breakfast"}
+      """
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería cumplir el esquema "postBooking.json"
+    Y la reserva de la respuesta debería coincidir con la enviada
+
+    Ejemplos:
+      | caso                      | nombre            | precio     |
+      | precio cero               | Jim               | 0          |
+      | precio máximo de un int   | Jim               | 2147483647 |
+      | nombre Unicode y emoji    | José Ñúñez 日本 🚀 | 100        |
+
+  Escenario: Crear una reserva sin el campo opcional additionalneeds
+    Cuando el envía la siguiente reserva:
+      """
+      {"firstname": "Jim", "lastname": "Limites", "totalprice": 100, "depositpaid": true,
+       "bookingdates": {"checkin": "2031-01-10", "checkout": "2031-01-12"}}
+      """
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería cumplir el esquema "postBooking.json"
+    Y la reserva de la respuesta debería coincidir con la enviada
+
+  # El esquema (additionalProperties: false) garantiza que el campo extra no se devuelve
+  Escenario: Crear una reserva con un campo desconocido lo ignora
+    Cuando el envía la siguiente reserva:
+      """
+      {"firstname": "Jim", "lastname": "Limites", "totalprice": 100, "depositpaid": true,
+       "bookingdates": {"checkin": "2031-01-10", "checkout": "2031-01-12"}, "admin": true}
+      """
+    Entonces el código de respuesta debería ser 200
+    Y la respuesta debería cumplir el esquema "postBooking.json"
+    Y la reserva de la respuesta debería coincidir con la enviada
+
   # ---------- Defectos conocidos de la API ----------
   # Restful Booker tiene errores intencionados para practicar testing. Estos escenarios describen el
   # comportamiento CORRECTO, así que hoy fallan. Están excluidos de la ejecución por defecto
@@ -232,3 +288,23 @@ Característica: Gestión de reservas en Restful Booker
     Cuando el consulta la reserva creada en formato "application/xml"
     Entonces el código de respuesta debería ser 200
     Y la cabecera "Content-Type" de la respuesta debería contener "xml"
+
+  @negativo @defectoConocido
+  Esquema del escenario: Crear una reserva con datos inválidos debería devolver 400 (<caso>)
+    Cuando el envía la siguiente reserva:
+      """
+      {"firstname": <nombre>, "lastname": "Limites", "totalprice": <precio>, "depositpaid": <deposito>,
+       "bookingdates": {"checkin": <checkin>, "checkout": "2031-12-31"}}
+      """
+    Entonces el código de respuesta debería ser 400
+
+    Ejemplos:
+      | caso                                            | nombre | precio | deposito | checkin      |
+      | precio negativo (hoy lo acepta)                 | "Jim"  | -100   | true     | "2031-01-10" |
+      | precio con decimales (hoy lo trunca)            | "Jim"  | 99.99  | true     | "2031-01-10" |
+      | nombre vacío (hoy lo acepta)                    | ""     | 100    | true     | "2031-01-10" |
+      | nombre numérico (hoy devuelve 500)              | 123    | 100    | true     | "2031-01-10" |
+      | depósito como texto (hoy lo convierte en true)  | "Jim"  | 100    | "yes"    | "2031-01-10" |
+      | 30 de febrero (hoy lo cambia a 2 de marzo)      | "Jim"  | 100    | true     | "2031-02-30" |
+      | mes 13 (hoy guarda "0NaN-aN-aN")                | "Jim"  | 100    | true     | "2031-13-01" |
+      | fecha en texto (hoy guarda "0NaN-aN-aN")        | "Jim"  | 100    | true     | "mañana"     |

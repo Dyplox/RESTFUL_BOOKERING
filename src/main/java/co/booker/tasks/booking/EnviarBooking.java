@@ -1,10 +1,17 @@
 package co.booker.tasks.booking;
 
+import co.booker.models.Booking;
 import net.serenitybdd.annotations.Step;
+import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.Task;
 import net.serenitybdd.screenplay.rest.interactions.Post;
 
+import java.util.Optional;
+
+import static co.booker.utils.Constantes.BOOKING_ID;
+import static co.booker.utils.Constantes.RESERVA_ENVIADA;
+import static co.booker.utils.Json.desde;
 import static co.booker.utils.endpoints.uris.BOOKING;
 import static net.serenitybdd.screenplay.Tasks.instrumented;
 
@@ -12,8 +19,9 @@ import static net.serenitybdd.screenplay.Tasks.instrumented;
  * Tarea que envía a {@code POST /booking} un body arbitrario, tal cual, sin validarlo.
  *
  * <p>Pensada para casos negativos (campos faltantes, tipos incorrectos, JSON malformado,
- * {@code Content-Type} o {@code Accept} distintos). A diferencia de {@link CrearBooking}, no guarda
- * nada en el actor: el escenario decide qué validar.</p>
+ * {@code Content-Type} o {@code Accept} distintos) y valores límite. Si el body es una reserva
+ * legible, la guarda como {@code RESERVA_ENVIADA} para compararla con la respuesta. Si la API la
+ * crea (incluso cuando no debería), guarda el {@code bookingid} para que la limpieza la elimine.</p>
  */
 public class EnviarBooking implements Task {
 
@@ -43,8 +51,31 @@ public class EnviarBooking implements Task {
     @Override
     @Step("{0} envía una reserva con Content-Type '#contentType' y Accept '#accept'")
     public <T extends Actor> void performAs(T actor) {
+        reservaLegible().ifPresent(reserva -> actor.remember(RESERVA_ENVIADA, reserva));
         actor.attemptsTo(Post.to(BOOKING.toString())
                 .with(peticion -> peticion.contentType(contentType).accept(accept).body(body)));
+        Integer id = idCreado();
+        if (id != null && actor.recall(BOOKING_ID) == null) {
+            actor.remember(BOOKING_ID, id);
+        }
+    }
+
+    private Optional<Booking> reservaLegible() {
+        try {
+            return Optional.ofNullable(desde(body, Booking.class));
+        } catch (RuntimeException noEsUnaReserva) {
+            return Optional.empty();
+        }
+    }
+
+    private static Integer idCreado() {
+        try {
+            return SerenityRest.lastResponse().statusCode() == 200
+                    ? SerenityRest.lastResponse().jsonPath().getObject("bookingid", Integer.class)
+                    : null;
+        } catch (RuntimeException respuestaNoJson) {
+            return null;
+        }
     }
 
     /**

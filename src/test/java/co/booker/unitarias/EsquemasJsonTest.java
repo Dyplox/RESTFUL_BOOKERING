@@ -59,6 +59,15 @@ class EsquemasJsonTest {
         );
     }
 
+    @org.junit.jupiter.api.Test
+    @DisplayName("ErroresDeEsquema devuelve vacío si cumple y la ruta del campo si no")
+    void erroresDeEsquemaIndicaElCampoQueFalla() {
+        org.junit.jupiter.api.Assertions.assertEquals("", co.booker.questions.ErroresDeEsquema.validar("booking.json", RESERVA));
+        String errores = co.booker.questions.ErroresDeEsquema.validar("booking.json", RESERVA.replace("111", "\"111\""));
+        assertTrue(errores.startsWith("/totalprice: "), errores);
+        assertTrue(co.booker.questions.ErroresDeEsquema.validar("booking.json", "{x").startsWith("el body no es JSON"));
+    }
+
     @ParameterizedTest(name = "{0} acepta {1}")
     @MethodSource("respuestasValidas")
     @DisplayName("Los esquemas aceptan respuestas reales de la API")

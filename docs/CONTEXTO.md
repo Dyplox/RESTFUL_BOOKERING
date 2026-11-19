@@ -28,7 +28,8 @@ Además hay **pruebas unitarias** (sin red) y un pipeline de **CI** en GitHub Ac
 | json-schema-validator | 6.3.0 | Validación del cuerpo contra JSON Schema (draft-04) |
 | Cucumber | 8.1.0 | Escenarios BDD en español (`# language: es`), motor JUnit Platform, en paralelo |
 | JUnit Platform / Jupiter | 6.1.3 | Runner de Cucumber (`@Suite`) y pruebas unitarias |
-| Hamcrest | 3.0 | Matchers de aserción |
+| Serenity Ensure | 5.4.2 | Aserciones en los step definitions, visibles en el reporte |
+| Hamcrest | 3.0 | Matchers en pruebas unitarias |
 | SonarQube plugin | 7.6.0 | Análisis estático (`./gradlew sonar`) |
 | Gson | 2.15.0 | Serialización de los modelos (`co.booker.utils.Json`) |
 | Docker (`mwinteringham/restfulbooker`) | latest | API local para desarrollo y CI |
@@ -54,7 +55,7 @@ Feature (.feature, español)
    │  Dado / Cuando / Entonces
    ▼
 Step Definitions (src/test/.../stepdefinitions)
-   │  theActorInTheSpotlight().attemptsTo(...) / should(seeThat(...))
+   │  theActorInTheSpotlight().attemptsTo(Task...) / attemptsTo(Ensure.that(Question)...)
    ▼
 Tasks (src/main/.../tasks)  ──►  Interacciones Serenity REST  ──►  RestAssured  ──►  API
    ▲
@@ -70,12 +71,13 @@ src/main/java/co/booker/
 │   ├── Ping.java                    GET /ping
 │   └── booking/
 │       ├── CrearBooking.java        POST /booking con una Booking; guarda bookingid, reserva creada y enviada
-│       ├── EnviarBooking.java       POST /booking con body, Content-Type y Accept arbitrarios (casos negativos)
+│       ├── EnviarBooking.java       POST /booking con body, Content-Type y Accept arbitrarios (negativos y valores límite)
 │       ├── GuardaToken.java         Guarda el "token" de la última respuesta en el actor
 │       ├── gets/                    BookingIds, BookingByName, BookingByCheck, BookingByID, BookingEnFormato (Accept)
 │       ├── updates/                 UpdateBooking (PUT), PartialUpdateBooking (PATCH): Booking como body; cookie solo si hay token
 │       └── deletes/                 DeleteBookingByCookie, DeleteBookingBasicAuth (credenciales configurables)
-├── questions/                       CodigoRespuestaHttp, TiempoRespuestaHttp, CampoRespuesta, CabeceraRespuesta, CuerpoRespuesta
+├── questions/                       CodigoRespuestaHttp, TiempoRespuestaHttp, CampoRespuesta, CabeceraRespuesta, CuerpoRespuesta,
+│                                    ErroresDeEsquema (errores con la ruta del campo), ReservaRespuesta (JSON canónico), IdsDeReservas
 ├── models/
 │   ├── Booking.java, BookingDates.java   records con los nombres de campo del JSON; Booking.con() aplica un PATCH
 │   └── ReservaFactory.java          valida() (apellido único y fechas futuras), actualizada(), cambioDeNombre()
@@ -174,6 +176,15 @@ Escenarios que describen el comportamiento **correcto** y hoy fallan. Excluidos 
 | POST con `totalprice` no numérico | 400 | 200 (guarda `null`) |
 | POST con `Content-Type: text/plain` | 415 | 500 |
 | Respuesta XML | `Content-Type` XML | `text/html` |
+| Precio negativo | 400 | 200 (lo acepta) |
+| Precio con decimales (`99.99`) | 400 | 200 (lo trunca a `99`) |
+| Nombre vacío | 400 | 200 (lo acepta) |
+| Nombre numérico | 400 | 500 |
+| `depositpaid: "yes"` | 400 | 200 (lo convierte en `true`) |
+| Fecha `2031-02-30` | 400 | 200 (la cambia a `2031-03-02`) |
+| Fecha `2031-13-01` o `"mañana"` | 400 | 200 (guarda `"0NaN-aN-aN"`) |
+
+El job `vigilancia` del CI los ejecuta a diario y falla si alguno empieza a pasar (la API lo habría corregido).
 
 ## 7. Configuración, tags y CI
 
@@ -182,7 +193,7 @@ Escenarios que describen el comportamiento **correcto** y hoy fallan. Excluidos 
 - **`build.gradle`**:
   - `test`: solo el motor de suites (Cucumber); `-Penv` elige el entorno; `-Ptags` se combina con las exclusiones por defecto; borra el reporte anterior (`clearReports`) y lo regenera siempre (`aggregate`).
   - `unitTest`: solo JUnit Jupiter, sin red.
-  - `validarFeatures`: dry-run de Cucumber sobre los 39 escenarios (no ejecuta hooks ni necesita red); falla si algún paso no está implementado.
+  - `validarFeatures`: dry-run de Cucumber sobre los 53 escenarios (no ejecuta hooks ni necesita red); falla si algún paso no está implementado.
   - `check` depende de las tres.
 - **Tags**: `@auth`/`@booking`/`@ping` (módulo), `@smoke`, `@negativo`, `@defectoConocido`, `@rendimiento`.
 - **CI** (`.github/workflows/ci.yml`): se lanza en push a `main`, en pull requests, a diario a las 06:00 UTC y a mano (con entorno y tags). Primero corre el job `verificacion` (unitarias, `validarFeatures`, Javadoc). Si pasa, corre el job `api`:
@@ -195,11 +206,11 @@ Escenarios que describen el comportamiento **correcto** y hoy fallan. Excluidos 
 
 | Suite | Pruebas | Resultado |
 |---|---|---|
-| API (por defecto) | 33 | ✅ en Docker (~3 s) y en la API pública (~9 s); estables en ejecuciones repetidas y en paralelo |
-| `@defectoConocido` | 5 | ❌ a propósito, igual en ambos entornos |
+| API (por defecto) | 39 | ✅ en Docker (~3 s) y en la API pública (~11 s); estables en ejecuciones repetidas y en paralelo |
+| `@defectoConocido` | 13 | ❌ a propósito, igual en ambos entornos |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 47 | ✅ |
-| `validarFeatures` | 39 escenarios | ✅ |
+| Unitarias | 48 | ✅ |
+| `validarFeatures` | 53 escenarios | ✅ |
 
 Se verificó que las validaciones fallan cuando deben:
 - Esquema relajado o valor incorrecto.
@@ -209,17 +220,16 @@ Se verificó que las validaciones fallan cuando deben:
 
 | # | Pendiente | Efecto |
 |---|---|---|
-| 1 | Los POST no se reintentan | Un fallo de infraestructura al crear una reserva sigue tumbando el escenario (a propósito: reintentar un POST puede duplicar datos) |
-| 2 | Sin análisis Sonar en CI | Requiere un servidor y `SONAR_TOKEN` |
-| 3 | El reporte de Serenity solo se publica como artefacto | Hay que descargarlo; no hay resumen en el PR |
-| 4 | Versiones y actions sin actualización automática | Las actualizaciones son manuales |
-| 5 | Sin casos de valores límite | Precio 0, negativo o enorme; nombres vacíos o largos; fechas imposibles |
+| 1 | El CI nunca se ha ejecutado en GitHub | Verificado en local (actionlint y esquemas oficiales de workflow y Dependabot), pero falta el primer run real |
+| 2 | GitHub Pages sin activar | Hay que elegir una vez *Settings → Pages → Source: GitHub Actions* para que se publique el reporte |
+| 3 | Los POST no se reintentan | A propósito: reintentar un POST puede duplicar datos |
+| 4 | Sin análisis Sonar en CI | Requiere un servidor y `SONAR_TOKEN` |
+| 5 | Nombres mezclados en inglés y español | `CrearBooking`/`GuardaToken` frente a `BookingByID`/`DeleteBookingByCookie`; factorías `usuario()`/`delServicio()` sin criterio común |
 
 ## 9. Próximos pasos sugeridos
 
-1. Valores límite y ciclo de vida completo (crear → consultar → actualizar → borrar) en un solo escenario.
-2. Publicar el reporte en GitHub Pages y dejar un resumen en cada PR.
-3. Dependabot o Renovate para Gradle y GitHub Actions; fijar las actions por SHA.
-4. Un job diario que avise cuando un `@defectoConocido` empiece a pasar (la API se habría corregido).
-5. Sonar en CI cuando haya servidor disponible.
-6. Retirar `--add-opens` y `net.bytebuddy.safe=false` cuando Serenity deje de inyectar clases por reflexión.
+1. Subir la rama y comprobar el primer run del CI; activar GitHub Pages.
+2. Unificar los nombres de tareas y factorías.
+3. Concurrencia (dos PUT simultáneos) y casos de tokens (reutilización, cookie mal formada).
+4. Formato y análisis estático automáticos (Spotless, Checkstyle o Error Prone) y Sonar cuando haya servidor.
+5. Retirar `--add-opens` y `net.bytebuddy.safe=false` cuando Serenity deje de inyectar clases por reflexión.

@@ -1,0 +1,33 @@
+# Actualizaciones automáticas de dependencias: cada lunes abre PRs que el CI valida.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      # Las librerías y el plugin de Serenity deben ir siempre en la misma versión
+      serenity:
+        patterns: ["net.serenity-bdd*"]
+      cucumber:
+        patterns: ["io.cucumber*"]
+      rest-assured:
+        patterns: ["io.rest-assured*"]
+      junit:
+        patterns: ["org.junit*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday

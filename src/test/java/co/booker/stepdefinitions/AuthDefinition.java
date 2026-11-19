@@ -8,13 +8,10 @@ import co.booker.utils.Configuracion;
 import io.cucumber.java.es.Cuando;
 import io.cucumber.java.es.Dado;
 import net.serenitybdd.screenplay.Actor;
+import net.serenitybdd.screenplay.ensure.Ensure;
 
 import static co.booker.utils.Constantes.TOKEN;
-import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
 import static net.serenitybdd.screenplay.actors.OnStage.theActorInTheSpotlight;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.emptyOrNullString;
 
 /** Step definitions de autenticación: pedir y guardar el token, o preparar un token inválido. */
 public class AuthDefinition {
@@ -50,10 +47,9 @@ public class AuthDefinition {
     public void elEstaAutenticado() {
         Actor actor = theActorInTheSpotlight();
         actor.attemptsTo(CrearToken.usuario(Configuracion.usuario(), Configuracion.clave()));
-        actor.should(
-                seeThat("el código al autenticarse", CodigoRespuestaHttp.fue(), equalTo(200)),
-                seeThat(CampoRespuesta.en("token"), not(emptyOrNullString()))
-        );
+        actor.attemptsTo(
+                Ensure.that("el código al autenticarse", CodigoRespuestaHttp.fue()).isEqualTo(200),
+                Ensure.that("el token recibido", CampoRespuesta.en("token")).isNotBlank());
         actor.attemptsTo(GuardaToken.ingreso());
     }
 

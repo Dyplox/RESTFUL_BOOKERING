@@ -1,0 +1,31 @@
+# Catálogo de versiones: única fuente de verdad de las dependencias (Dependabot lo actualiza).
+# Mantener Serenity (librerías y plugin) en la misma versión.
+
+[versions]
+serenity = "5.4.2"
+cucumber = "8.1.0"
+restAssured = "6.3.0"
+junit = "6.1.3"
+gson = "2.15.0"
+hamcrest = "3.0"
+sonarqube = "7.6.0.18749"
+
+[libraries]
+serenity-core = { module = "net.serenity-bdd:serenity-core", version.ref = "serenity" }
+serenity-screenplay-rest = { module = "net.serenity-bdd:serenity-screenplay-rest", version.ref = "serenity" }
+serenity-ensure = { module = "net.serenity-bdd:serenity-ensure", version.ref = "serenity" }
+serenity-cucumber = { module = "net.serenity-bdd:serenity-cucumber", version.ref = "serenity" }
+cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
+cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
+rest-assured-json-schema-validator = { module = "io.rest-assured:json-schema-validator", version.ref = "restAssured" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-platform-suite = { module = "org.junit.platform:junit-platform-suite" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+
+[plugins]
+serenity = { id = "net.serenity-bdd.serenity-gradle-plugin", version.ref = "serenity" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
