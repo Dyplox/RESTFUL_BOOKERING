@@ -13,6 +13,10 @@ Las actualizaciones de Dependabot no se listan una a una; ver el historial de co
 
 ## [Sin publicar]
 
+### Cambiado
+
+- Dependencias solo desde Maven Central: se quita `mavenLocal()` para que el build no dependa del `~/.m2` de cada máquina.
+
 ## [1.0.0] - 2026-11-19
 
 Primera versión publicada: la suite pasa de prueba de concepto a automatización mantenible y verificada en CI.
