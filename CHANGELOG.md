@@ -15,11 +15,19 @@ Las actualizaciones de Dependabot no se listan una a una; ver el historial de co
 
 ### Añadido
 
-- Umbral mínimo de cobertura combinada con JaCoCo (85 % de líneas, 65 % de ramas): `jacocoTestCoverageVerification`, ejecutado en el CI después de las pruebas de API.
+- Pruebas unitarias de `ErroresDeEsquema` (error en la raíz, errores anidados de `anyOf`, esquema inexistente) y validación de la cabecera `Content-Type` al consultar una reserva.
+- Umbral mínimo de cobertura combinada con JaCoCo (90 % de líneas, 70 % de ramas): `jacocoTestCoverageVerification`, ejecutado en el CI después de las pruebas de API.
 
 ### Cambiado
 
+- Correcciones del análisis de SonarQube Cloud: constructores vacíos documentados, variables sin nombre (`_`) en los `catch` ignorados, zona horaria explícita en `ReservaFactory` y menor complejidad en `resumen_pruebas.py`.
+- Los scripts de `.github/` dejan de contar para la cobertura de SonarQube Cloud (se siguen analizando).
+- El health check inicial reutiliza `ReintentoInfraestructura` (2 s y 4 s de espera) en lugar de su propio bucle con `Thread.sleep`.
 - Dependencias solo desde Maven Central: se quita `mavenLocal()` para que el build no dependa del `~/.m2` de cada máquina.
+
+### Corregido
+
+- `resumen_pruebas.py` fallaba si un escenario fallido no traía mensaje de error.
 
 ## [1.0.0] - 2026-11-19
 

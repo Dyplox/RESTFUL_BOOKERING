@@ -13,6 +13,7 @@ public class BookingIds implements Task {
 
     /** Constructor usado por Serenity al instrumentar la tarea; usar {@link #delServicio()}. */
     public BookingIds() {
+        // Vacío a propósito: la tarea no tiene parámetros; Tasks.instrumented necesita este constructor.
     }
 
     /**

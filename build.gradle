@@ -146,11 +146,11 @@ tasks.named('jacocoTestCoverageVerification', JacocoCoverageVerification) {
         rule {
             limit {
                 counter = 'LINE'
-                minimum = 0.85
+                minimum = 0.90
             }
             limit {
                 counter = 'BRANCH'
-                minimum = 0.65
+                minimum = 0.70
             }
         }
     }
@@ -165,6 +165,8 @@ sonar {
         property 'sonar.projectKey', 'Dyplox_RESTFUL_BOOKERING'
         property 'sonar.organization', 'dyplox'
         property 'sonar.projectName', 'RESTFUL_BOOKERING'
+        // Los scripts del CI se analizan (bugs, code smells) pero no cuentan para la cobertura
+        property 'sonar.coverage.exclusions', '.github/**'
         property 'sonar.coverage.jacoco.xmlReportPaths',
                 layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml').get().asFile.absolutePath
     }

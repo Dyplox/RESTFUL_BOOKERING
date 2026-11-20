@@ -63,7 +63,7 @@ public class EnviarBooking implements Task {
     private Optional<Booking> reservaLegible() {
         try {
             return Optional.ofNullable(desde(body, Booking.class));
-        } catch (RuntimeException noEsUnaReserva) {
+        } catch (RuntimeException _) {
             return Optional.empty();
         }
     }
@@ -73,7 +73,7 @@ public class EnviarBooking implements Task {
             return SerenityRest.lastResponse().statusCode() == 200
                     ? SerenityRest.lastResponse().jsonPath().getObject("bookingid", Integer.class)
                     : null;
-        } catch (RuntimeException respuestaNoJson) {
+        } catch (RuntimeException _) {
             return null;
         }
     }

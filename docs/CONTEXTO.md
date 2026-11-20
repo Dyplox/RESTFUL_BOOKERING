@@ -210,7 +210,7 @@ El job `vigilancia` del CI los ejecuta a diario y falla si alguno empieza a pasa
 | API (por defecto) | 39 | ✅ en Docker (~3 s) y en la API pública (~11 s); estables en ejecuciones repetidas y en paralelo |
 | `@defectoConocido` | 13 | ❌ a propósito, igual en ambos entornos |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 48 | ✅ |
+| Unitarias | 51 | ✅ |
 | `validarFeatures` | 53 escenarios | ✅ |
 
 Se verificó que las validaciones fallan cuando deben:

@@ -11,6 +11,7 @@ public class IdsDeReservas implements Question<Collection<Integer>> {
 
     /** Constructor público; usar {@link #enLaRespuesta()}. */
     public IdsDeReservas() {
+        // Vacío a propósito: la pregunta no tiene estado; se crea con su método de fábrica.
     }
 
     /**

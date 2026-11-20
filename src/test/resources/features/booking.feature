@@ -55,6 +55,7 @@ Característica: Gestión de reservas en Restful Booker
     Entonces el código de respuesta debería ser 200
     Y la respuesta debería cumplir el esquema "booking.json"
     Y la respuesta debería coincidir con la reserva creada
+    Y la cabecera "Content-Type" de la respuesta debería contener "application/json"
 
   Escenario: Consultar una reserva en formato XML
     Dado el tiene una reserva creada

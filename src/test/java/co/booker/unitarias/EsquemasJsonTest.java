@@ -1,14 +1,19 @@
 package co.booker.unitarias;
 
+import co.booker.questions.ErroresDeEsquema;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -59,13 +64,39 @@ class EsquemasJsonTest {
         );
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     @DisplayName("ErroresDeEsquema devuelve vacío si cumple y la ruta del campo si no")
     void erroresDeEsquemaIndicaElCampoQueFalla() {
-        org.junit.jupiter.api.Assertions.assertEquals("", co.booker.questions.ErroresDeEsquema.validar("booking.json", RESERVA));
-        String errores = co.booker.questions.ErroresDeEsquema.validar("booking.json", RESERVA.replace("111", "\"111\""));
+        assertEquals("", ErroresDeEsquema.validar("booking.json", RESERVA));
+        String errores = ErroresDeEsquema.validar("booking.json", RESERVA.replace("111", "\"111\""));
         assertTrue(errores.startsWith("/totalprice: "), errores);
-        assertTrue(co.booker.questions.ErroresDeEsquema.validar("booking.json", "{x").startsWith("el body no es JSON"));
+        assertTrue(ErroresDeEsquema.validar("booking.json", "{x").startsWith("el body no es JSON"));
+    }
+
+    @Test
+    @DisplayName("ErroresDeEsquema usa '/' cuando el error está en la raíz del documento")
+    void erroresDeEsquemaEnLaRaiz() {
+        String errores = ErroresDeEsquema.validar("token.json", "{}");
+        assertTrue(errores.startsWith("/: "), errores);
+    }
+
+    @Test
+    @DisplayName("ErroresDeEsquema desglosa los errores anidados de anyOf e ignora los avisos")
+    void erroresDeEsquemaAnidados() {
+        String esquema = "esquemas-prueba/compuesto.json";
+        assertEquals("", ErroresDeEsquema.validar(esquema, "{\"valor\":\"abc\"}"));
+        List<String> errores = List.of(ErroresDeEsquema.validar(esquema, "{\"valor\":\"ABC\"}").split("\n"));
+        assertEquals(2, errores.size(), errores.toString());
+        assertTrue(errores.stream().allMatch(e -> e.startsWith("/valor: ")), errores.toString());
+        assertTrue(errores.stream().noneMatch(e -> e.contains("x-palabra-desconocida")), errores.toString());
+    }
+
+    @Test
+    @DisplayName("ErroresDeEsquema falla con un mensaje claro si el esquema no existe")
+    void erroresDeEsquemaConEsquemaInexistente() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> ErroresDeEsquema.validar("noExiste.json", "{}"));
+        assertTrue(e.getMessage().contains("noExiste.json"), e.getMessage());
     }
 
     @ParameterizedTest(name = "{0} acepta {1}")
