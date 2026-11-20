@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Solo para EsquemasJsonTest: anyOf (errores anidados) y una palabra clave desconocida (aviso, no error).",
+  "x-palabra-desconocida": true,
+  "type": "object",
+  "properties": {
+    "valor": {
+      "anyOf": [
+        { "type": "integer" },
+        { "type": "string", "pattern": "^[a-z]+$" }
+      ]
+    }
+  }
+}

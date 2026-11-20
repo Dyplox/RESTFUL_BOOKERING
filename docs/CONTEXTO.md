@@ -194,7 +194,7 @@ El job `vigilancia` del CI los ejecuta a diario y falla si alguno empieza a pasa
 - **`build.gradle`**:
   - `test`: solo el motor de suites (Cucumber); `-Penv` elige el entorno; `-Ptags` se combina con las exclusiones por defecto; borra el reporte anterior (`clearReports`) y lo regenera siempre (`aggregate`).
   - `unitTest`: solo JUnit Jupiter, sin red.
-  - `validarFeatures`: dry-run de Cucumber sobre los 53 escenarios (no ejecuta hooks ni necesita red); falla si algún paso no está implementado.
+  - `validarFeatures`: dry-run de Cucumber sobre los 54 escenarios (no ejecuta hooks ni necesita red); falla si algún paso no está implementado.
   - `check` depende de las tres.
 - **Tags**: `@auth`/`@booking`/`@ping` (módulo), `@smoke`, `@negativo`, `@defectoConocido`, `@rendimiento`.
 - **CI** (`.github/workflows/ci.yml`): se lanza en push a `main`, en pull requests, a diario a las 06:00 UTC y a mano (con entorno y tags). Primero corre el job `verificacion` (unitarias, `validarFeatures`, Javadoc). Si pasa, corre el job `api`:
@@ -207,11 +207,11 @@ El job `vigilancia` del CI los ejecuta a diario y falla si alguno empieza a pasa
 
 | Suite | Pruebas | Resultado |
 |---|---|---|
-| API (por defecto) | 39 | ✅ en Docker (~3 s) y en la API pública (~11 s); estables en ejecuciones repetidas y en paralelo |
+| API (por defecto) | 40 | ✅ en Docker (~3 s) y en la API pública (~11 s); estables en ejecuciones repetidas y en paralelo |
 | `@defectoConocido` | 13 | ❌ a propósito, igual en ambos entornos |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 48 | ✅ |
-| `validarFeatures` | 53 escenarios | ✅ |
+| Unitarias | 58 | ✅ |
+| `validarFeatures` | 54 escenarios | ✅ |
 
 Se verificó que las validaciones fallan cuando deben:
 - Esquema relajado o valor incorrecto.

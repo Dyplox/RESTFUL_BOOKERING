@@ -13,6 +13,7 @@ import net.serenitybdd.screenplay.Question;
 public class CodigoRespuestaHttp implements Question<Integer> {
     /** Constructor público; usar {@link #fue()}. */
     public CodigoRespuestaHttp() {
+        // Vacío a propósito: la pregunta no tiene estado; se crea con su método de fábrica.
     }
 
     /**

@@ -16,6 +16,7 @@ public class TiempoRespuestaHttp implements Question<Long> {
 
     /** Constructor público; usar {@link #fue()}. */
     public TiempoRespuestaHttp() {
+        // Vacío a propósito: la pregunta no tiene estado; se crea con su método de fábrica.
     }
 
     /**

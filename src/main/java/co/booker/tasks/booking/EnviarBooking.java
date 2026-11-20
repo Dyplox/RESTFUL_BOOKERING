@@ -1,6 +1,9 @@
 package co.booker.tasks.booking;
 
 import co.booker.models.Booking;
+import io.restassured.path.json.JsonPath;
+import io.restassured.path.xml.XmlPath;
+import io.restassured.response.Response;
 import net.serenitybdd.annotations.Step;
 import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
@@ -63,17 +66,30 @@ public class EnviarBooking implements Task {
     private Optional<Booking> reservaLegible() {
         try {
             return Optional.ofNullable(desde(body, Booking.class));
-        } catch (RuntimeException noEsUnaReserva) {
+        } catch (RuntimeException _) {
             return Optional.empty();
         }
     }
 
     private static Integer idCreado() {
+        Response respuesta = SerenityRest.lastResponse();
+        return respuesta.statusCode() == 200 ? idEnRespuesta(respuesta.getBody().asString()) : null;
+    }
+
+    /**
+     * Extrae el {@code bookingid} de la respuesta de {@code POST /booking}, en JSON o en XML. Con
+     * {@code Accept: application/xml} la API crea la reserva y responde {@code <created-booking>}
+     * (servido como {@code text/html}): sin leer el id de ahí, la limpieza no la borraría.
+     *
+     * @param cuerpo body de la respuesta
+     * @return id de la reserva creada, o {@code null} si el body no lo contiene
+     */
+    public static Integer idEnRespuesta(String cuerpo) {
         try {
-            return SerenityRest.lastResponse().statusCode() == 200
-                    ? SerenityRest.lastResponse().jsonPath().getObject("bookingid", Integer.class)
-                    : null;
-        } catch (RuntimeException respuestaNoJson) {
+            return cuerpo.stripLeading().startsWith("<")
+                    ? Integer.valueOf(XmlPath.from(cuerpo).getString("created-booking.bookingid"))
+                    : JsonPath.from(cuerpo).getObject("bookingid", Integer.class);
+        } catch (RuntimeException _) {
             return null;
         }
     }

@@ -1,6 +1,7 @@
 package co.booker.models;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -48,6 +49,6 @@ public final class ReservaFactory {
     }
 
     private static LocalDate fechaFuturaAleatoria() {
-        return LocalDate.now().plusYears(5).plusDays(ThreadLocalRandom.current().nextInt(0, 365));
+        return LocalDate.now(ZoneOffset.UTC).plusYears(5).plusDays(ThreadLocalRandom.current().nextInt(0, 365));
     }
 }

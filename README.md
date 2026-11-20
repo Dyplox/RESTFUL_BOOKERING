@@ -83,7 +83,7 @@ cd RESTFUL_BOOKERING
 ./gradlew check
 
 # Cobertura combinada (unitarias + API): build/reports/jacoco/test/html/index.html
-# y umbral mínimo (85 % de líneas, 65 % de ramas): el build falla si baja
+# y umbral mínimo (90 % de líneas, 70 % de ramas): el build falla si baja
 ./gradlew unitTest test jacocoTestReport jacocoTestCoverageVerification -Penv=docker
 ```
 
@@ -120,7 +120,7 @@ Además:
 
 ## Calidad y releases
 
-- **Cobertura mínima**: el CI combina la cobertura de las pruebas unitarias y de API y falla si baja del 85 % de líneas o del 65 % de ramas (umbral en `build.gradle`).
+- **Cobertura mínima**: el CI combina la cobertura de las pruebas unitarias y de API y falla si baja del 90 % de líneas o del 70 % de ramas (umbral en `build.gradle`).
 - **`main` protegida**: los cambios entran por pull request, con los jobs de unitarias y de API en verde y la rama al día.
 - **SonarQube Cloud**: el CI analiza el código en cada push y PR, con la cobertura combinada de JaCoCo, y espera al *quality gate*. Necesita el secreto `SONAR_TOKEN` en el repositorio; sin él, el paso se omite.
 - **Releases**: la versión está en `gradle.properties` y los cambios en [`CHANGELOG.md`](CHANGELOG.md). Para publicar:
@@ -179,11 +179,11 @@ Escenario: Eliminar una reserva sin token devuelve 403 y no la borra
 
 | Suite | Pruebas | Resultado |
 |---|---|---|
-| API (por defecto) | 39 | ✅ en Docker (~3 s) y en la API pública (~11 s), en paralelo y en ejecuciones repetidas |
+| API (por defecto) | 40 | ✅ en Docker (~3 s) y en la API pública (~11 s), en paralelo y en ejecuciones repetidas |
 | `@defectoConocido` | 13 | ❌ fallan a propósito: documentan errores de la API |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 48 | ✅ |
-| Validación de features | 53 escenarios | ✅ todos los pasos implementados |
+| Unitarias | 58 | ✅ |
+| Validación de features | 54 escenarios | ✅ todos los pasos implementados |
 
 ## Licencia
 

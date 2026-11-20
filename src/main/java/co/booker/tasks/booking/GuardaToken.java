@@ -19,6 +19,7 @@ public class GuardaToken implements Task {
 
     /** Constructor usado por Serenity al instrumentar la tarea; usar {@link #ingreso()}. */
     public GuardaToken() {
+        // Vacío a propósito: la tarea no tiene parámetros; Tasks.instrumented necesita este constructor.
     }
 
     /**

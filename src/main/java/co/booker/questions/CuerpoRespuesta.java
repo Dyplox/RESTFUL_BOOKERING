@@ -14,6 +14,7 @@ public class CuerpoRespuesta implements Question<String> {
 
     /** Constructor público; usar {@link #comoTexto()}. */
     public CuerpoRespuesta() {
+        // Vacío a propósito: la pregunta no tiene estado; se crea con su método de fábrica.
     }
 
     /**

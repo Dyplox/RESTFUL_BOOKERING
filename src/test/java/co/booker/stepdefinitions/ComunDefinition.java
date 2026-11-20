@@ -12,6 +12,7 @@ import io.cucumber.java.BeforeAll;
 import co.booker.utils.Autenticacion;
 import co.booker.utils.ClienteApi;
 import co.booker.utils.Configuracion;
+import co.booker.utils.ReintentoInfraestructura;
 import io.cucumber.java.es.Dado;
 import io.cucumber.java.es.Entonces;
 import io.restassured.RestAssured;
@@ -32,6 +33,7 @@ import static net.serenitybdd.screenplay.actors.OnStage.theActorInTheSpotlight;
 public class ComunDefinition {
 
     private static final int INTENTOS_HEALTH_CHECK = 3;
+    private static final long ESPERA_INICIAL_HEALTH_CHECK_MS = 2000;
 
     /**
      * Se ejecuta una vez antes de toda la suite: aplica la configuración global del cliente HTTP
@@ -43,23 +45,23 @@ public class ComunDefinition {
     public static void verificarApiDisponible() {
         ClienteApi.configurar();
         String url = Configuracion.urlBase();
-        String ultimoError = "sin respuesta";
-        for (int intento = 1; intento <= INTENTOS_HEALTH_CHECK; intento++) {
-            try {
-                int codigo = RestAssured.given().baseUri(url).get("ping").statusCode();
-                if (codigo == 201) {
-                    return;
-                }
-                ultimoError = "GET /ping respondió " + codigo;
-            } catch (Exception e) {
-                // RestAssured lanza excepciones checked (p. ej. ConnectException) sin declararlas
-                ultimoError = e.getClass().getSimpleName() + ": " + e.getMessage();
+        String error;
+        try {
+            // Mismo reintento con espera exponencial que el resto de peticiones (2 s y 4 s) ante errores
+            // de conexión o 502/503/504, p. ej. mientras la API pública de Heroku despierta.
+            // noFilters() evita sumar el reintento global configurado en ClienteApi.
+            int codigo = RestAssured.given().noFilters()
+                    .filter(new ReintentoInfraestructura(INTENTOS_HEALTH_CHECK, ESPERA_INICIAL_HEALTH_CHECK_MS))
+                    .baseUri(url).get("ping").statusCode();
+            if (codigo == 201) {
+                return;
             }
-            if (intento < INTENTOS_HEALTH_CHECK) {
-                esperar(2000L * intento);
-            }
+            error = "GET /ping respondió " + codigo;
+        } catch (Exception e) {
+            // RestAssured lanza excepciones checked (p. ej. ConnectException) sin declararlas
+            error = e.getClass().getSimpleName() + ": " + e.getMessage();
         }
-        throw new IllegalStateException("La API no está disponible en " + url + " (" + ultimoError
+        throw new IllegalStateException("La API no está disponible en " + url + " (" + error
                 + "). Si usas -Penv=docker, arranca el contenedor: "
                 + "docker run -d -p 3001:3001 mwinteringham/restfulbooker");
     }
@@ -84,7 +86,7 @@ public class ComunDefinition {
                         .header("Authorization", Autenticacion.basic(Configuracion.usuario(), Configuracion.clave()))
                         .delete(BOOKING.toString() + id);
             }
-        } catch (RuntimeException ignorada) {
+        } catch (RuntimeException _) {
             // La limpieza nunca debe hacer fallar un escenario.
         }
     }
@@ -166,14 +168,5 @@ public class ComunDefinition {
     public void elTiempoDeRespuestaDeberiaSerMenorA(Integer milisegundos) {
         theActorInTheSpotlight().attemptsTo(
                 Ensure.that("el tiempo de respuesta (ms)", TiempoRespuestaHttp.fue()).isLessThan(milisegundos.longValue()));
-    }
-
-    private static void esperar(long milisegundos) {
-        try {
-            Thread.sleep(milisegundos);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Espera interrumpida", e);
-        }
     }
 }
