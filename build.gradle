@@ -136,6 +136,26 @@ tasks.named('jacocoTestReport', JacocoReport) {
     }
 }
 
+// Umbral mínimo de cobertura combinada (unitarias + API): falla el build si baja.
+// Ejecutar después de ambas suites completas: ./gradlew unitTest test jacocoTestCoverageVerification
+// Con solo una de ellas (o con -Ptags) la cobertura es parcial y no llega al umbral.
+tasks.named('jacocoTestCoverageVerification', JacocoCoverageVerification) {
+    mustRunAfter 'unitTest', 'test'
+    executionData.setFrom(tasks.named('jacocoTestReport', JacocoReport).map { it.executionData })
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                minimum = 0.85
+            }
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.65
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // SonarQube Cloud: ./gradlew sonar (necesita la variable de entorno SONAR_TOKEN; el CI lo ejecuta
 // en cada push y PR si existe el secreto). projectKey y organization deben coincidir con sonarcloud.io.

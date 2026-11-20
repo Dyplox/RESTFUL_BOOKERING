@@ -19,7 +19,7 @@ docker compose up -d                            # local API (image pinned by dig
 ./gradlew validarFeatures                       # Cucumber dry-run: fails if any step is undefined (no network)
 ./gradlew check                                 # unitTest + validarFeatures + test
 ./gradlew javadoc                               # must stay warning-free
-./gradlew unitTest test jacocoTestReport -Penv=docker   # combined coverage (unit + API)
+./gradlew unitTest test jacocoTestReport jacocoTestCoverageVerification -Penv=docker   # combined coverage + minimum threshold
 ./gradlew sonar                                 # SonarQube Cloud (needs SONAR_TOKEN; projectKey Dyplox_RESTFUL_BOOKERING, org dyplox)
 ```
 
@@ -37,7 +37,9 @@ Serenity REST injects generated classes via ByteBuddy reflection, which Java 26+
 ## Coverage, Sonar and releases
 
 - `jacocoTestReport` reads `build/jacoco/unitTest.exec` and `test.exec` from tests already run (`mustRunAfter`, never `dependsOn`, so asking for the report doesn't trigger the API suite). Gradle 9 rejects reading another task's output without declaring the ordering.
-- CI runs `unitTest jacocoTestReport sonar -Dsonar.qualitygate.wait=true` in the `api` job (after the API tests, full git history) only if the `SONAR_TOKEN` secret exists. SonarCloud must use CI-based analysis (Automatic Analysis off).
+- `jacocoTestCoverageVerification` (same exec data, `mustRunAfter`) enforces 85% lines / 65% branches on the combined coverage. It only passes after **both** full suites; unit tests alone give ~31% lines, and a `-Ptags` run is partial too. CI runs it in the `api` job after the API tests, only when no tag expression is given.
+- Sonar runs as a separate step (`sonar -Dsonar.qualitygate.wait=true`, reusing that report) only if the `SONAR_TOKEN` secret exists. SonarCloud must use CI-based analysis (Automatic Analysis off).
+- `main` is branch-protected (no direct push, even for admins): always work on a branch and open a PR; the "Unitarias, features y Javadoc (sin red)" and "Pruebas de API (docker)" checks must pass and the branch must be up to date. Renaming those jobs breaks the required checks.
 - Releases: bump `version` in `gradle.properties`, move `[Sin publicar]` notes in `CHANGELOG.md` to `## [x.y.z] - date`, merge, then push tag `vx.y.z`; `.github/workflows/release.yml` checks tag = version, extracts the notes and publishes the release with the Javadoc zip (it runs only offline checks, not the API suite).
 - If Gradle fails with "Failed to exec spawn helper", the JDK was updated under a running daemon: `./gradlew --stop`.
 
