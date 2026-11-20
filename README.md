@@ -179,11 +179,11 @@ Escenario: Eliminar una reserva sin token devuelve 403 y no la borra
 
 | Suite | Pruebas | Resultado |
 |---|---|---|
-| API (por defecto) | 39 | ✅ en Docker (~3 s) y en la API pública (~11 s), en paralelo y en ejecuciones repetidas |
+| API (por defecto) | 40 | ✅ en Docker (~3 s) y en la API pública (~11 s), en paralelo y en ejecuciones repetidas |
 | `@defectoConocido` | 13 | ❌ fallan a propósito: documentan errores de la API |
 | `@rendimiento` | 1 | ⚠️ depende de la latencia |
-| Unitarias | 51 | ✅ |
-| Validación de features | 53 escenarios | ✅ todos los pasos implementados |
+| Unitarias | 58 | ✅ |
+| Validación de features | 54 escenarios | ✅ todos los pasos implementados |
 
 ## Licencia
 

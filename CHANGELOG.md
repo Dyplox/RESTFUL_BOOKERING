@@ -16,6 +16,7 @@ Las actualizaciones de Dependabot no se listan una a una; ver el historial de co
 ### Añadido
 
 - Pruebas unitarias de `ErroresDeEsquema` (error en la raíz, errores anidados de `anyOf`, esquema inexistente) y validación de la cabecera `Content-Type` al consultar una reserva.
+- Escenario "Crear una reserva pidiendo la respuesta en XML" y pruebas unitarias de `EnviarBooking.idEnRespuesta`.
 - Umbral mínimo de cobertura combinada con JaCoCo (90 % de líneas, 70 % de ramas): `jacocoTestCoverageVerification`, ejecutado en el CI después de las pruebas de API.
 
 ### Cambiado
@@ -28,6 +29,7 @@ Las actualizaciones de Dependabot no se listan una a una; ver el historial de co
 ### Corregido
 
 - `resumen_pruebas.py` fallaba si un escenario fallido no traía mensaje de error.
+- `EnviarBooking` no recordaba el id de las reservas creadas con `Accept: application/xml` (la API responde `<created-booking>`), así que la limpieza no las borraba.
 
 ## [1.0.0] - 2026-11-19
 

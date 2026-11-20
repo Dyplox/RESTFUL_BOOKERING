@@ -1,6 +1,7 @@
 package co.booker.stepdefinitions;
 
 import co.booker.models.Booking;
+import co.booker.models.ReservaFactory;
 import co.booker.questions.CodigoRespuestaHttp;
 import co.booker.questions.CuerpoRespuesta;
 import co.booker.questions.IdsDeReservas;
@@ -146,6 +147,16 @@ public class BookingDefinition {
     }
 
     /**
+     * Crea una reserva con datos únicos pidiendo la respuesta en otro formato (cabecera {@code Accept}).
+     *
+     * @param accept valor de la cabecera {@code Accept}, p. ej. {@code application/xml}
+     */
+    @Cuando("el crea una reserva pidiendo la respuesta en {string}")
+    public void elCreaUnaReservaPidiendoLaRespuestaEn(String accept) {
+        theActorInTheSpotlight().attemptsTo(EnviarBooking.conBody(aJson(ReservaFactory.valida()), "application/json", accept));
+    }
+
+    /**
      * Envía a {@code POST /booking} el body indicado, tal cual, con cabeceras JSON.
      *
      * @param body body de la petición (DocString del escenario)
@@ -283,6 +294,13 @@ public class BookingDefinition {
         actor.attemptsTo(BookingByID.delServicio(idReservaCreada().toString()));
         actor.attemptsTo(Ensure.that("el código al volver a consultar", CodigoRespuestaHttp.fue()).isEqualTo(200));
         ensureReserva(ReservaRespuesta.completa(), reservaEnviada());
+    }
+
+    /** Verifica que el cuerpo (XML) de la última respuesta contiene el apellido único de la reserva enviada. */
+    @Entonces("el cuerpo de la respuesta debería contener el apellido de la reserva enviada en XML")
+    public void elCuerpoDeberiaContenerElApellidoDeLaReservaEnviadaEnXml() {
+        theActorInTheSpotlight().attemptsTo(
+                Ensure.that(CuerpoRespuesta.comoTexto()).contains("<lastname>" + reservaEnviada().lastname() + "</lastname>"));
     }
 
     /** Verifica que el cuerpo (XML) de la última respuesta contiene el apellido único de la reserva creada. */
