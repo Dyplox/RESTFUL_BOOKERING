@@ -83,7 +83,8 @@ cd RESTFUL_BOOKERING
 ./gradlew check
 
 # Cobertura combinada (unitarias + API): build/reports/jacoco/test/html/index.html
-./gradlew unitTest test jacocoTestReport -Penv=docker
+# y umbral mínimo (85 % de líneas, 65 % de ramas): el build falla si baja
+./gradlew unitTest test jacocoTestReport jacocoTestCoverageVerification -Penv=docker
 ```
 
 El reporte HTML se regenera en cada ejecución en `target/site/serenity/index.html`. Si una prueba falla, el build termina en `BUILD FAILED` y el reporte se genera igualmente.
@@ -119,6 +120,8 @@ Además:
 
 ## Calidad y releases
 
+- **Cobertura mínima**: el CI combina la cobertura de las pruebas unitarias y de API y falla si baja del 85 % de líneas o del 65 % de ramas (umbral en `build.gradle`).
+- **`main` protegida**: los cambios entran por pull request, con los jobs de unitarias y de API en verde y la rama al día.
 - **SonarQube Cloud**: el CI analiza el código en cada push y PR, con la cobertura combinada de JaCoCo, y espera al *quality gate*. Necesita el secreto `SONAR_TOKEN` en el repositorio; sin él, el paso se omite.
 - **Releases**: la versión está en `gradle.properties` y los cambios en [`CHANGELOG.md`](CHANGELOG.md). Para publicar:
   1. En un PR, subir la versión y mover las notas de `[Sin publicar]` a `## [<versión>] - <fecha>`.

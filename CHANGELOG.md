@@ -13,6 +13,10 @@ Las actualizaciones de Dependabot no se listan una a una; ver el historial de co
 
 ## [Sin publicar]
 
+### Añadido
+
+- Umbral mínimo de cobertura combinada con JaCoCo (85 % de líneas, 65 % de ramas): `jacocoTestCoverageVerification`, ejecutado en el CI después de las pruebas de API.
+
 ### Cambiado
 
 - Dependencias solo desde Maven Central: se quita `mavenLocal()` para que el build no dependa del `~/.m2` de cada máquina.

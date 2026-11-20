@@ -113,13 +113,19 @@ jobs:
         if: always()
         run: python3 .github/scripts/resumen_pruebas.py build/test-results/test "Pruebas de API ($ENTORNO)" >> "$GITHUB_STEP_SUMMARY"
 
-      # Cobertura combinada (unitarias + API) y análisis en SonarQube Cloud. Se omite si el repositorio
-      # no tiene el secreto SONAR_TOKEN, y en la ejecución diaria (no hay código nuevo que analizar).
-      - name: Cobertura y SonarQube Cloud
-        if: env.SONAR_TOKEN != '' && github.event_name != 'schedule'
+      # Cobertura combinada (unitarias + API) con umbral mínimo (build.gradle): falla si baja.
+      # Solo con la suite completa: con una expresión de tags la cobertura es parcial.
+      - name: Cobertura (umbral mínimo)
+        if: env.TAGS == ''
+        run: ./gradlew unitTest jacocoTestReport jacocoTestCoverageVerification
+
+      # Análisis en SonarQube Cloud con el informe de cobertura del paso anterior. Se omite si el
+      # repositorio no tiene el secreto SONAR_TOKEN, y en la ejecución diaria (no hay código nuevo).
+      - name: SonarQube Cloud
+        if: env.SONAR_TOKEN != '' && env.TAGS == '' && github.event_name != 'schedule'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew unitTest jacocoTestReport sonar -Dsonar.qualitygate.wait=true
+        run: ./gradlew sonar -Dsonar.qualitygate.wait=true
 
       - name: Publicar informe de cobertura
         if: always() && hashFiles('build/reports/jacoco/test/html/index.html') != ''
