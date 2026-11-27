@@ -20,6 +20,8 @@ Cubre:
 
 Cada prueba valida el **código HTTP** y, según el caso, la respuesta contra un **JSON Schema**, **valores concretos** del body, **cabeceras** y **efectos** (p. ej. que una reserva borrada devuelva 404).
 
+> 🇬🇧 **English summary:** API test automation for the public [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) API with **Serenity BDD** (Screenplay pattern), **REST Assured** and **Cucumber**, plus **JUnit Jupiter** unit tests. It covers auth, the full booking CRUD and lifecycle, filters, XML, boundary values and negative cases, and documents the API's known defects as tests excluded by default. Every test checks the HTTP status and, where relevant, JSON Schema, body values, headers and side effects. CI runs on GitHub Actions with a SonarQube Cloud quality gate, JaCoCo coverage gates and a [Serenity report published on GitHub Pages](https://dyplox.github.io/RESTFUL_BOOKERING/). The rest of this README is in Spanish.
+
 > 📘 Arquitectura, flujo de una prueba y pendientes: [`docs/CONTEXTO.md`](docs/CONTEXTO.md)
 
 ## Stack
